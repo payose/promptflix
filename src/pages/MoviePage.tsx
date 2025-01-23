@@ -22,16 +22,23 @@ interface MovieDetails extends Movie {
 const MoviePage: React.FC<MovieDetailsProps> = () => {
     const navigate = useNavigate();
 
+    const { state } = useLocation();
+    const movie = state.movie;
+
     const goBack = () => {
         navigate(-1);
         // navigate('/specific-route')
     };
 
-    const { state } = useLocation();
-    const movie = state.movie;
-
     const [details, setDetails] = useState<MovieDetails | null>(null);
     const [activeTrailer, setActiveTrailer] = useState<string | null>(null);
+
+    const getYoutubeTrailer = async(movieTitle:string) => {
+        const response = await fetch(`https://youtube.googleapis.com/youtube/v3/search?channelType=any&maxResults=1&q=${movieTitle}trailer&key=AIzaSyAG4NH0PoFLV4W569T_iqQQFKaLr1shzYE`)
+      const data = await response.json();
+      console.log(data)
+        setActiveTrailer(data.items[0].id.videoId)
+    }
 
     useEffect(() => {
         // Mock API call - replace with actual TMDB API fetch
@@ -109,7 +116,7 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
 
                             {/* Trailer Button */}
                             <button
-                                // onClick={() => setActiveTrailer(details.trailer_key || null)}
+                                onClick={() => getYoutubeTrailer(details.title)}
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
                             >
                                 <PlayCircle /> Watch Trailer
@@ -143,7 +150,7 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
                         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
                             <div className="max-w-4xl w-full">
                                 <button
-                                    //   onClick={() => setActiveTrailer(null)}
+                                    onClick={() => setActiveTrailer(null)}
                                     className="absolute top-4 right-4 text-white text-2xl"
                                 >
                                     ✕
