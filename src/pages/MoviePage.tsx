@@ -36,7 +36,6 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
     const getYoutubeTrailer = async(movieTitle:string) => {
         const response = await fetch(`https://youtube.googleapis.com/youtube/v3/search?channelType=any&maxResults=1&q=${movieTitle}trailer&key=AIzaSyAG4NH0PoFLV4W569T_iqQQFKaLr1shzYE`)
       const data = await response.json();
-      console.log(data)
         setActiveTrailer(data.items[0].id.videoId)
     }
 

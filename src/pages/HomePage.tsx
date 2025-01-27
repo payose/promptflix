@@ -96,10 +96,6 @@ const HomePage = () => {
         }, 2000);
     };
 
-    const handleMovieSelect = () => {
-        console.log("on select function")
-    }
-
     return (
         <div className="">
             <div className="min-h-screen w-screen bg-gradient-to-b from-gray-900 to-gray-800 p-6">
@@ -169,7 +165,6 @@ const HomePage = () => {
                                         <MovieCard 
                                             key={movie.id} 
                                             movie={movie} 
-                                            onSelect={handleMovieSelect}
                                         />
                                     ))}
                                 </div>
