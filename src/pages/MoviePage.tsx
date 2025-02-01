@@ -11,15 +11,18 @@ interface MovieDetailsProps {
 interface MovieDetails extends Movie {
     runtime: number;
     trailer_key?: string;
-    cast: Array<{
+    genres: Array<{
         id: number;
         name: string;
-        character: string;
-        profile_path?: string;
     }>;
+    belongs_to_collection: string;
+    backdrop_path: string;
+    tagline: string;
 }
 
 const MoviePage: React.FC<MovieDetailsProps> = () => {
+    const tmdbKey = import.meta.env.VITE_APP_TMDB_API_KEY;
+
     const navigate = useNavigate();
 
     const { state } = useLocation();
@@ -30,6 +33,7 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
         // navigate('/specific-route')
     };
 
+    const [imageError, setImageError] = useState(false);
     const [details, setDetails] = useState<MovieDetails | null>(null);
     const [activeTrailer, setActiveTrailer] = useState<string | null>(null);
 
@@ -39,32 +43,39 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
         setActiveTrailer(data.items[0].id.videoId)
     }
 
-    useEffect(() => {
-        // Mock API call - replace with actual TMDB API fetch
-        const fetchMovieDetails = async () => {
-            const mockDetails: MovieDetails = {
-                ...movie,
-                runtime: 148,
-                trailer_key: 'dQw4w9WgXcQ', // YouTube trailer key
-                cast: [
-                    {
-                        id: 1,
-                        name: 'Leonardo DiCaprio',
-                        character: 'Main Character',
-                        profile_path: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=800'
-                    },
-                    {
-                        id: 2,
-                        name: 'Joseph Gordon-Levitt',
-                        character: 'Supporting Role',
-                        profile_path: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=800'
-                    }
-                ]
+    const fetchMovieDetails = async (id:string|number) => {
+        const tmdbResponse = await fetch(
+            `https://api.themoviedb.org/3/movie/${id}?api_key=${tmdbKey}`,
+            { headers: { accept: 'application/json' } }
+        );
+        const movieResult = await tmdbResponse.json();
+        
+        if (movieResult && movieResult) {
+            const tmdbMovie = movieResult;
+            
+            const details: MovieDetails = {
+                id: tmdbMovie.id,
+                title: tmdbMovie.title,
+                release_date: tmdbMovie.release_date,
+                overview: tmdbMovie.overview,
+                poster_path: tmdbMovie.poster_path,
+                backdrop_path: tmdbMovie.backdrop_path,
+                video: tmdbMovie.video,
+                vote_average: tmdbMovie.vote_average,
+                vote_count: tmdbMovie.vote_count,
+                original_language: tmdbMovie.original_language,
+                genres: tmdbMovie.genres,
+                belongs_to_collection: tmdbMovie.belongs_to_collection,
+                runtime: tmdbMovie.runtime,
+                tagline: tmdbMovie.tagline
             };
-            setDetails(mockDetails);
-        };
+            
+            setDetails(details);
+        }
+    };
 
-        fetchMovieDetails();
+    useEffect(() => {
+        fetchMovieDetails(movie.id);
     }, [movie]);
 
     return (
@@ -80,13 +91,14 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
                     </button>
 
                     {/* Movie Hero Section */}
-                    <div className="grid md:grid-cols-[300px_1fr] gap-8">
+                    <div className="grid md:grid-cols-[400px_1fr] gap-8">
                         {/* Poster */}
                         <div>
                             <img
-                                src={details.posterPath}
-                                alt={details.title}
-                                className="w-full rounded-lg shadow-2xl"
+                                src={imageError ? `https://images.pexels.com/photos/29890776/pexels-photo-29890776/free-photo-of-traditional-vietnamese-new-year-gift-box.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2` 
+                                                : `http://image.tmdb.org/t/p/w500/${details.backdrop_path}`}
+                                alt={`poster of ${details.title}`}
+                                onError={() => setImageError(true)}
                             />
                         </div>
 
@@ -106,7 +118,9 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Film className="text-green-400" />
-                                    <span>{details.genres?.join(', ')}</span>
+                                    {details.genres.map(genre => (
+                                        <span key={genre.id}>{genre.name}</span>
+                                    ))}
                                 </div>
                             </div>
 
@@ -120,27 +134,6 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
                             >
                                 <PlayCircle /> Watch Trailer
                             </button>
-                        </div>
-                    </div>
-
-                    {/* Cast Section */}
-                    <div className="mt-12">
-                        <h2 className="text-2xl text-gray-200 mb-6">Cast</h2>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {details.cast.map(actor => (
-                                <div
-                                    key={actor.id}
-                                    className="bg-gray-800 rounded-lg p-4 text-center"
-                                >
-                                    <img
-                                        src={actor.profile_path}
-                                        alt={actor.name}
-                                        className="w-24 h-24 mx-auto rounded-full object-cover mb-2"
-                                    />
-                                    <p className="text-gray-200">{actor.name}</p>
-                                    <p className="text-gray-500 text-sm">{actor.character}</p>
-                                </div>
-                            ))}
                         </div>
                     </div>
 
