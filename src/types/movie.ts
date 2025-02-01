@@ -11,3 +11,20 @@ export interface Movie {
     vote_count?: number;
     original_language?: string;
 }
+
+export interface ReviewAuthorDetails {
+    name: string;
+    username: string;
+    avatar_path: string | null;
+    rating: number | null;
+}
+
+export interface Review {
+    author: string;
+    author_details: ReviewAuthorDetails;
+    content: string;
+    created_at: string;
+    id: string;
+    updated_at: string;
+    url: string;
+}
