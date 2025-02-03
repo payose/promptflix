@@ -1,80 +1,87 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 
-// Define an interface for API configurations
 interface APIConfig {
     baseURL: string;
     apiKey: string;
+    keyParam?: string;
+    authType: 'urlParam' | 'headerBearer';
 }
 
-// Create a class to manage multiple API configurations
 class APIService {
-    // Private static instance to store configurations
     private static configs: Record<string, APIConfig> = {
-        default: {
+        tmdb: {
             baseURL: import.meta.env.VITE_APP_TMDB_BASE_URL || '',
-            apiKey: import.meta.env.VITE_APP_TMDB_API_KEY || ''
+            apiKey: import.meta.env.VITE_APP_TMDB_API_KEY || '',
+            keyParam: 'api_key',
+            authType: 'urlParam'
         },
-        // Additional API configurations can be added here
-        aiService: {
+        openai: {
             baseURL: import.meta.env.VITE_APP_OPENAI_BASE_URL || '',
-            apiKey: import.meta.env.VITE_APP_OPENAI_API_KEY || ''
+            apiKey: import.meta.env.VITE_APP_OPENAI_API_KEY || '',
+            authType: 'headerBearer'
         },
-        youTubeService: {
+        youtube: {
             baseURL: import.meta.env.VITE_APP_YOUTUBE_URL || '',
-            apiKey: import.meta.env.VITE_APP_YOUTUBE_KEY || ''
+            apiKey: import.meta.env.VITE_APP_YOUTUBE_KEY || '',
+            keyParam: 'key',
+            authType: 'urlParam'
         }
     };
 
-    // Cached Axios instances to improve performance
     private static instances: Record<string, AxiosInstance> = {};
 
-    // Method to get or create an Axios instance for a specific service
-    static getInstance(serviceName: keyof typeof APIService.configs = 'default'): AxiosInstance {
-        // If instance doesn't exist, create it
+    static getInstance(serviceName: keyof typeof APIService.configs): AxiosInstance {
         if (!this.instances[serviceName]) {
             const config = this.configs[serviceName];
 
-            // Create Axios instance with base configuration
-            const instance = axios.create({
+            const axiosConfig: AxiosRequestConfig = {
                 baseURL: config.baseURL,
-                // You can add more default configurations here
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${config.apiKey}`
-                }
-            });
+                params: config.authType === 'urlParam' && config.keyParam
+                    ? { [config.keyParam]: config.apiKey }
+                    : {}
+            };
 
-            // Optional: Add request interceptor for additional customization
+            const instance = axios.create(axiosConfig);
+
             instance.interceptors.request.use(
                 (requestConfig) => {
-                    // You can modify request config here if needed
-                    // For example, dynamically adding additional headers or query params
+                    if (config.authType === 'headerBearer') {
+                        requestConfig.headers['Authorization'] = `Bearer ${config.apiKey}`;
+                    }
                     return requestConfig;
                 },
                 (error) => Promise.reject(error)
             );
 
-            // Optional: Add response interceptor for global error handling
-            instance.interceptors.response.use(
-                (response) => response,
-                (error) => {
-                    // Centralized error handling
-                    console.error(`API Error in ${serviceName} service:`, error);
-                    return Promise.reject(error);
-                }
-            );
-
-            // Cache the instance
             this.instances[serviceName] = instance;
         }
 
         return this.instances[serviceName];
     }
-
-    // Utility method to get current configuration (useful for debugging)
-    static getConfig(serviceName: keyof typeof APIService.configs = 'default'): APIConfig {
-        return this.configs[serviceName];
-    }
 }
+
+// Service-specific fetch methods
+// export const fetchTMDBMovie = async (endpoint: string) => {
+//     const tmdbInstance = APIService.getInstance('tmdb');
+//     return tmdbInstance.get(`/${endpoint}`);
+// };
+
+// export const searchYouTubeVideos = async (query: string) => {
+//     const youtubeInstance = APIService.getInstance('youtube');
+//     return youtubeInstance.get('/search', {
+//         params: {
+//             q: query,
+//             maxResults: 1
+//         }
+//     });
+// };
+
+// export const createOpenAICompletion = async (prompt: string) => {
+//     const openaiInstance = APIService.getInstance('openai');
+//     return openaiInstance.post('/chat/completions', {
+//         model: "gpt-3.5-turbo",
+//         messages: [{ role: "user", content: prompt }]
+//     });
+// };
 
 export default APIService;
