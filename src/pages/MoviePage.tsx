@@ -4,6 +4,7 @@ import type { Movie, Review } from '@/types/movie';
 import { useLocation } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import ReviewCard from "@/components/core/reviews"
+import APIService from "@/api/axios"
 
 interface MovieDetailsProps {
     movie: Movie;
@@ -30,8 +31,6 @@ interface ReviewsResponse {
 }
 
 const MoviePage: React.FC<MovieDetailsProps> = () => {
-    const tmdbKey = import.meta.env.VITE_APP_TMDB_API_KEY;
-
     const navigate = useNavigate();
     const { state } = useLocation();
     const movie = state.movie;
@@ -49,58 +48,40 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
     };
 
     const getYoutubeTrailer = async (movieTitle: string) => {
-        const response = await fetch(`https://youtube.googleapis.com/youtube/v3/search?channelType=any&maxResults=1&q=${movieTitle}trailer&key=AIzaSyAG4NH0PoFLV4W569T_iqQQFKaLr1shzYE`)
-        const data = await response.json();
-        setActiveTrailer(data.items[0].id.videoId)
+        try {
+            const response = await APIService.getInstance('youtube').get(`/search?channelType=any&maxResults=1&q=${movieTitle}%trailer`);
+            setActiveTrailer(response.data.items[0].id.videoId)
+        } catch (error) {
+            console.error('Failed to fetch user data', error);
+            throw error;
+        }
     }
 
     const fetchMovieDetails = async (id: string | number) => {
-        const tmdbResponse = await fetch(
-            `https://api.themoviedb.org/3/movie/${id}?api_key=${tmdbKey}`,
-            { headers: { accept: 'application/json' } }
-        );
-        const movieResult = await tmdbResponse.json();
+        try {
+            const response = await APIService.getInstance('tmdb').get(`/movie/${id}`);
+            const details: MovieDetails = response.data;
 
-        if (movieResult && movieResult) {
-            const tmdbMovie = movieResult;
-
-            const details: MovieDetails = {
-                id: tmdbMovie.id,
-                title: tmdbMovie.title,
-                release_date: tmdbMovie.release_date,
-                overview: tmdbMovie.overview,
-                poster_path: tmdbMovie.poster_path,
-                backdrop_path: tmdbMovie.backdrop_path,
-                video: tmdbMovie.video,
-                vote_average: tmdbMovie.vote_average,
-                vote_count: tmdbMovie.vote_count,
-                original_language: tmdbMovie.original_language,
-                genres: tmdbMovie.genres,
-                belongs_to_collection: tmdbMovie.belongs_to_collection,
-                runtime: tmdbMovie.runtime,
-                tagline: tmdbMovie.tagline
-            };
 
             setDetails(details);
+        } catch (error) {
+            console.error('Failed to fetch user data', error);
+            throw error;
         }
     };
 
     const fetchReviews = async () => {
             setIsLoadingReviews(true);
             try {
-                const response = await fetch(
-                    `https://api.themoviedb.org/3/movie/${movie.id}/reviews?api_key=${tmdbKey}&page=${currentPage}`
-                );
-                
-                if (!response.ok) {
-                    throw new Error('Failed to fetch reviews');
-                }
-                
-                const data: ReviewsResponse = await response.json();
-                setReviews(data);
+                const response = await APIService.getInstance('tmdb').get(`/movie/${movie.id}/reviews`);
+                setReviews(response.data);
+
             } catch (error) {
-                console.error('Error fetching reviews:', error);
+                console.error('Failed to fetch user data', error);
+                throw error;
+
             } finally {
+
                 setIsLoadingReviews(false);
             }
     };
@@ -111,7 +92,7 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
 
     useEffect(() => {
         fetchReviews();
-    }, [movie.id, currentPage]);
+    }, [movie, currentPage]);
 
     return (
         <div className="fixed inset-0 z-50 bg-gray-900 overflow-y-auto">
@@ -120,7 +101,7 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
                     {/* Header with Back Button */}
                     <button
                         onClick={goBack}
-                        className="flex items-center gap-2 text-gray-300 hover:text-white mb-6"
+                        className="flex items-center gap-2 text-gray-300 bg-gray-800/50 hover:text-white mb-6"
                     >
                         <ArrowLeft /> Back to Search
                     </button>
