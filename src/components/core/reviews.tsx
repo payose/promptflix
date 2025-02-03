@@ -55,7 +55,7 @@ const ReviewCard: React.FC<{ review: Review }> = ({ review }) => {
           {review.content.length > 200 && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-blue-400 hover:text-blue-300 text-sm mt-2 flex items-center gap-1"
+              className="text-blue-400 hover:text-blue-300 bg-transparent text-sm mt-2 flex items-center gap-1 p-1 border-none outline-none"
             >
               {isExpanded ? 'Show less' : 'Read more'}
               <ChevronDown className={`w-4 h-4 transform ${isExpanded ? 'rotate-180' : ''}`} />
