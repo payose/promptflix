@@ -28,3 +28,8 @@ export interface Review {
     updated_at: string;
     url: string;
 }
+
+export interface MovieQueryResult {
+    title: string;
+    year: number;
+}
