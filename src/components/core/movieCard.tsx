@@ -1,6 +1,6 @@
 // import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState } from 'react';
-import { Stars, ThumbsUp } from 'lucide-react';
+import { Stars } from 'lucide-react';
 import type { Movie } from '@/types/movie';
 import { Link } from 'react-router-dom'
 
