@@ -2,33 +2,21 @@ import { useState, useEffect } from 'react';
 import { SearchIcon, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import MovieCard from '@/components/core/movieCard';
-import type { Movie, MovieQueryResult } from '@/types/movie';
-import APIService from "@/api/axios"
+import APIService from "@/api/axios";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "./store";
+import { fetchMoviesResults } from "@/redux/movieSlice";
 
 const HomePage = () => {
     const [query, setQuery] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [results, setResults] = useState<Movie[]>([]);
-    // const [loading, setLoading] = useState(false);
 
-    const queryResult =
-        [
-            { "title": "Little Women", "year": 2019 },
-            { "title": "Promising Young Woman", "year": 2020 },
-            { "title": "Nomadland", "year": 2021 },
-            { "title": "Wonder Woman 1984", "year": 2020 },
-            { "title": "Captain Marvel", "year": 2019 },
-            { "title": "The Woman King", "year": 2022 },
-            { "title": "Everything Everywhere All at Once", "year": 2022 },
-            { "title": "Mulan", "year": 2020 },
-            { "title": "Birds of Prey", "year": 2020 },
-            { "title": "Black Widow", "year": 2021 }
-        ]; 
-        
+    const dispatch = useDispatch<AppDispatch>();
+    const { movies, loading } = useSelector((state: RootState) => state.movies);
+
     useEffect(() => {
-        fetchMovie(queryResult);
-
-    }, []);
+        dispatch(fetchMoviesResults());
+    }, [dispatch]);
+    
 
     const handleAISearch = async () => {
         setLoading(true);
@@ -71,32 +59,6 @@ const HomePage = () => {
             console.error('Error:', error);
         }
         setLoading(false);
-    };
-
-    const fetchMovie = async (queryResult:MovieQueryResult[]) => {
-        try {
-            // Use Promise.all to handle multiple async operations
-            const moviePromises = queryResult.map(async (result) => {
-                const response = await APIService.getInstance('tmdb').get(`/search/movie?query=${result.title}&year=${result.year}`);
-                
-                if (response.data.results && response.data.results[0]) {
-                    const transformedMovie: Movie = response.data.results[0];
-                    console.log(response.data)
-                    return transformedMovie;
-                }
-                return null;
-            });
-    
-            // Wait for all promises to resolve
-            const newMovies = await Promise.all(moviePromises);
-            
-            // Filter out null values and update state
-            const validMovies = newMovies.filter((movie): movie is Movie => movie !== null);
-            setResults(prevResults => [...prevResults, ...validMovies]);
-            
-        } catch (error) {
-            console.error('Error fetching movie data:', error);
-        }
     };
 
     return (
@@ -163,7 +125,7 @@ const HomePage = () => {
                                 Example Results for: "Mind-bending sci-fi movies that make you think"
                             </h2>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-10 gap-y-10">
-                                {results.map((movie) => (
+                                {movies.map((movie) => (
                                     <MovieCard
                                         key={movie.id}
                                         movie={movie}
