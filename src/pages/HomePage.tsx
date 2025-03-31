@@ -27,8 +27,10 @@ const HomePage = () => {
     ];
 
     useEffect(() => {
-        dispatch(fetchMoviesResults(initialList));
-    }, [dispatch]);
+        if (movies.length === 0) {
+            dispatch(fetchMoviesResults(initialList));
+        }
+    }, [dispatch, movies.length]); // ✅ Only runs if movies array is empty
     
 
     const handleAISearch = async () => {

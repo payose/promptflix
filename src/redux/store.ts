@@ -1,10 +1,19 @@
 import { configureStore } from '@reduxjs/toolkit';
 import movieReducer from "./movieSlice"
+import storage from "redux-persist/lib/storage";
+import { persistReducer, persistStore } from "redux-persist";
 
-export const store = configureStore({
-  reducer: {
-    movies: movieReducer
-  },
-});
-
-export default store;
+const persistConfig = {
+    key: "movies",
+    storage,
+  };
+  
+  const persistedMovieReducer = persistReducer(persistConfig, movieReducer);
+  
+  export const store = configureStore({
+    reducer: {
+      movies: persistedMovieReducer,
+    },
+  });
+  
+export const persistor = persistStore(store);
