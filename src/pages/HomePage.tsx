@@ -13,14 +13,25 @@ const HomePage = () => {
     const dispatch = useDispatch<AppDispatch>();
     const { movies, loading } = useSelector((state: RootState) => state.movies);
 
+    const initialList = [
+        { title: "Little Women", year: 2019 },
+        { title: "Promising Young Woman", year: 2020 },
+        { title: "Nomadland", year: 2021 },
+        { title: "Wonder Woman 1984", year: 2020 },
+        { title: "Captain Marvel", year: 2019 },
+        { title: "The Woman King", year: 2022 },
+        { title: "Everything Everywhere All at Once", year: 2022 },
+        { title: "Mulan", year: 2020 },
+        { title: "Birds of Prey", year: 2020 },
+        { title: "Black Widow", year: 2021 },
+    ];
+
     useEffect(() => {
-        dispatch(fetchMoviesResults());
+        dispatch(fetchMoviesResults(initialList));
     }, [dispatch]);
     
 
     const handleAISearch = async () => {
-        setLoading(true);
-     
         try {
             const response = await APIService.getInstance('openai').post("/chat/completions", {
                 model: "gpt-3.5-turbo",
@@ -45,8 +56,9 @@ const HomePage = () => {
                     movie.title && typeof movie.title === 'string' && 
                     movie.year && typeof movie.year === 'number'
                 )) {
-                    console.log(parsedMovies);
-                    fetchMovie(parsedMovies);
+
+                    dispatch(fetchMoviesResults(parsedMovies));
+
                 } else {
                     throw new Error('Invalid movie data format');
                 }
@@ -58,7 +70,6 @@ const HomePage = () => {
         } catch (error) {
             console.error('Error:', error);
         }
-        setLoading(false);
     };
 
     return (

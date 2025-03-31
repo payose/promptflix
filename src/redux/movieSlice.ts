@@ -8,18 +8,6 @@ interface MovieState {
   error: string | null;
 }
 
-const movieList = [
-  { title: "Little Women", year: 2019 },
-  { title: "Promising Young Woman", year: 2020 },
-  { title: "Nomadland", year: 2021 },
-  { title: "Wonder Woman 1984", year: 2020 },
-  { title: "Captain Marvel", year: 2019 },
-  { title: "The Woman King", year: 2022 },
-  { title: "Everything Everywhere All at Once", year: 2022 },
-  { title: "Mulan", year: 2020 },
-  { title: "Birds of Prey", year: 2020 },
-  { title: "Black Widow", year: 2021 },
-];
 
 const initialState: MovieState = {
   loading: false,
@@ -28,7 +16,7 @@ const initialState: MovieState = {
 };
 
 // Async action
-export const fetchMoviesResults = createAsyncThunk("movie/fetchMoviesResults", async (_, { rejectWithValue }) => {
+export const fetchMoviesResults = createAsyncThunk("movie/fetchMoviesResults", async (movieList, { rejectWithValue }) => {
   try {
     const moviePromises = movieList.map(async (result) => {
       const response = await APIService.getInstance("tmdb").get(`/search/movie?query=${result.title}&year=${result.year}`);
