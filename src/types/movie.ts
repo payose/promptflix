@@ -29,7 +29,7 @@ export interface Review {
     url: string;
 }
 
-export interface MovieQueryResult {
+export interface MovieListItem  {
     title: string;
     year: number;
 }

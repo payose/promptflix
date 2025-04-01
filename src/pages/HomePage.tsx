@@ -2,16 +2,15 @@ import { useState, useEffect } from 'react';
 import { SearchIcon, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import MovieCard from '@/components/core/movieCard';
-import APIService from "@/api/axios";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState, AppDispatch } from "./store";
-import { fetchMoviesResults } from "@/redux/movieSlice";
+import { fetchMoviesResults, queryAIforMovieList } from "@/redux/movieSlice";
 
 const HomePage = () => {
     const [query, setQuery] = useState('');
 
     const dispatch = useDispatch<AppDispatch>();
-    const { movies, loading } = useSelector((state: RootState) => state.movies);
+    const { moviesList, loading } = useSelector((state: RootState) => state.movies);
 
     const initialList = [
         { title: "Little Women", year: 2019 },
@@ -27,51 +26,14 @@ const HomePage = () => {
     ];
 
     useEffect(() => {
-        if (movies.length === 0) {
+        if (moviesList.length === 0) {
             dispatch(fetchMoviesResults(initialList));
         }
-    }, [dispatch, movies.length]); // ✅ Only runs if movies array is empty
+    }, [dispatch, moviesList.length]);
     
 
     const handleAISearch = async () => {
-        try {
-            const response = await APIService.getInstance('openai').post("/chat/completions", {
-                model: "gpt-3.5-turbo",
-                messages: [{
-                    "role": "system",
-                    "content": "You are a knowledgeable assistant with expertise in movies and TV shows. Your task is to recommend 10 movies based on the user's prompt. Each recommendation should be an object containing the movie title and the year of release. If there are multiple movies that match the user's criteria, prioritize those that are more recently released with higher ratings. Return the results as a JSON array of 10 objects, strictly adhering to this format: [{\"title\": \"Movie Title\", \"year\": 2023}, ...]. Do not include additional commentary or formatting."
-                }, {
-                    role: "user",
-                    content: query
-                }]
-            });
-            
-            const queryResult = response.data.choices[0].message.content;
-    
-            console.log(queryResult);
-            try {
-                // Parse the JSON string, handling potential formatting issues
-                const parsedMovies = JSON.parse(queryResult.replace(/\n/g, '').trim());
-                
-                // Validate the parsed data
-                if (Array.isArray(parsedMovies) && parsedMovies.every(movie => 
-                    movie.title && typeof movie.title === 'string' && 
-                    movie.year && typeof movie.year === 'number'
-                )) {
-
-                    dispatch(fetchMoviesResults(parsedMovies));
-
-                } else {
-                    throw new Error('Invalid movie data format');
-                }
-            } catch (parseError) {
-                console.error('Error parsing movie data:', parseError);
-                // Optionally, handle parsing error (e.g., show error message to user)
-            }
-    
-        } catch (error) {
-            console.error('Error:', error);
-        }
+        dispatch(queryAIforMovieList(query));
     };
 
     return (
@@ -137,8 +99,8 @@ const HomePage = () => {
                             <h2 className="text-xl text-gray-300 mb-4">
                                 Example Results for: "Mind-bending sci-fi movies that make you think"
                             </h2>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-10 gap-y-10">
-                                {movies.map((movie) => (
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-12 gap-y-10">
+                                {moviesList.map((movie) => (
                                     <MovieCard
                                         key={movie.id}
                                         movie={movie}
