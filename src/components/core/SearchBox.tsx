@@ -1,16 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useDispatch, useSelector } from "react-redux";
-import { fetchMoviesResults, queryAIforMovieList } from "@/redux/movieSlice";
+import { useSelector } from "react-redux";
 import { SearchIcon, Loader2 } from 'lucide-react';
-import { RootState, AppDispatch } from "./store";
+import { RootState } from "@/redux/store";
 import { useNavigate } from 'react-router-dom';
 
 export default function SearchBox() {
     const [scrolled, setScrolled] = useState(false)
     const [query, setQuery] = useState('');
     const { loading } = useSelector((state: RootState) => state.movies);
-
-    const dispatch = useDispatch<AppDispatch>();
 
     // Get URL parameters
     const getUrlParams = () => {
@@ -43,25 +40,19 @@ export default function SearchBox() {
         const initialQuery = getUrlParams();
         if (initialQuery) {
             setQuery(initialQuery);
-            // Auto-trigger search if there's a query in URL
-            dispatch(queryAIforMovieList(initialQuery));
         }
-    }, [dispatch]);
+    }, []);
 
     // Handle browser back/forward buttons
     useEffect(() => {
         const handlePopState = () => {
             const queryFromUrl = getUrlParams();
             setQuery(queryFromUrl);
-            // Only trigger search if there's a query from URL (user navigated to a search URL)
-            if (queryFromUrl) {
-                dispatch(queryAIforMovieList(queryFromUrl));
-            }
         };
 
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
-    }, [dispatch]);
+    }, []);
 
     // Handle input change without URL updates
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,10 +66,8 @@ export default function SearchBox() {
         if (!query.trim()) return;
         
         // Navigate to search page with query parameter
+        // SearchResultsPage will handle the API call
         navigate(`/search?q=${encodeURIComponent(query)}`);
-        
-        // Redux action will be triggered by SearchResultsPage
-        dispatch(queryAIforMovieList(query));
     };
 
     // Truncate long queries for display purposes

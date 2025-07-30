@@ -132,7 +132,7 @@ const TrendingMoviesCarousel = () => {
                                 <div className="flex items-end pb-10 w-full px-8 md:px-16 lg:px-24 z-20">
                                     
                                     {/* Movie info */}
-                                    <div className="text-left flex-1 max-w-2xl text-white/70">
+                                    <div className="flex-1 max-w-2xl text-white/70">
                                         {/* <Badge variant="secondary" className="mb-4 bg-red-600 text-white hover:bg-red-700">
                                             Trending #{index + 1}
                                             </Badge> */}

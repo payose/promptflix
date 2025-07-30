@@ -8,6 +8,7 @@ interface MovieState {
     moviesList: Movie[];
     movieSection: Movie[];
     sectionResults: Record<string, Movie[]>;
+    searchResults: Record<string, Movie[]>;
     sectionLoading: boolean;
     sectionError: string | null;
     error: string | null;
@@ -19,6 +20,7 @@ const initialState: MovieState = {
     moviesList: [],
     movieSection: [],
     sectionResults: {},
+    searchResults: {},
     sectionLoading: false,
     sectionError: null,
     error: null,
@@ -47,10 +49,17 @@ export const fetchMoviesResults = createAsyncThunk(
     }
 );
 
-// Async action to fetch movie list from AI API through search query
+// Async action to fetch movie list from AI API through search query with caching
 export const queryAIforMovieList = createAsyncThunk(
     "movie/queryAIforMovieList",
-    async (query: string, { dispatch, rejectWithValue }) => {
+    async (query: string, { dispatch, getState, rejectWithValue }) => {
+        const state = getState() as { movies: MovieState };
+        
+        // Check if we already have cached results for this query
+        if (state.movies.searchResults[query]) {
+            return { query, movies: state.movies.searchResults[query] };
+        }
+
         try {
             const response = await APIService.getInstance("openai").post("/chat/completions", {
                 model: "gpt-3.5-turbo",
@@ -84,8 +93,9 @@ export const queryAIforMovieList = createAsyncThunk(
                         dispatch(fetchMoviesResults(movie)).unwrap()
                     );
                     const detailedMovies = await Promise.all(moviePromises);
+                    const filteredMovies = detailedMovies.filter((movie): movie is Movie => movie !== null);
 
-                    return detailedMovies.filter((movie): movie is Movie => movie !== null);
+                    return { query, movies: filteredMovies };
                 } else {
                     throw new Error("Invalid AI response format");
                 }
@@ -178,6 +188,9 @@ const movieSlice = createSlice({
         },
         clearSectionCache: (state) => {
             state.sectionResults = {};
+        },
+        clearSearchCache: (state) => {
+            state.searchResults = {};
         }
     },
     extraReducers: (builder) => {
@@ -185,12 +198,11 @@ const movieSlice = createSlice({
             .addCase(queryAIforMovieList.pending, (state) => {
                 state.loading = true;
                 state.error = null;
-                state.movies = [];
-                state.moviesList = [];
             })
-            .addCase(queryAIforMovieList.fulfilled, (state, action: PayloadAction<MovieListItem>) => {
+            .addCase(queryAIforMovieList.fulfilled, (state, action: PayloadAction<{ query: string; movies: Movie[] }>) => {
                 state.loading = false;
-                state.moviesList = [...state.moviesList, ...action.payload];
+                state.searchResults[action.payload.query] = action.payload.movies;
+                state.movies = action.payload.movies;
             })
             .addCase(queryAIforMovieList.rejected, (state, action) => {
                 state.loading = false;
