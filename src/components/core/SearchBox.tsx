@@ -70,8 +70,7 @@ export default function SearchBox() {
         navigate(`/search?q=${encodeURIComponent(query)}`);
     };
 
-    // Truncate long queries for display purposes
-    const truncateQuery = (text: string, maxLength: number = 50) => {
+    const truncateLenghtyQuery = (text: string, maxLength: number = 50) => {
         if (text.length <= maxLength) return text;
         return text.substring(0, maxLength) + '...';
     };
@@ -105,7 +104,7 @@ export default function SearchBox() {
             {query && query.length > 50 && (
                 <div className="mt-2 px-2">
                     <p className="text-xs text-gray-500">
-                        Searching: {truncateQuery(query, 80)}
+                        Searching: {truncateLenghtyQuery(query, 80)}
                     </p>
                 </div>
             )}
