@@ -52,7 +52,6 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
             const response = await APIService.getInstance('youtube').get(`/search?channelType=any&maxResults=1&q=${movieTitle}%trailer`);
             setActiveTrailer(response.data.items[0].id.videoId)
         } catch (error) {
-            console.error('Failed to fetch user data', error);
             throw error;
         }
     }
@@ -62,10 +61,8 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
             const response = await APIService.getInstance('tmdb').get(`/movie/${id}`);
             const details: MovieDetails = response.data;
 
-
             setDetails(details);
         } catch (error) {
-            console.error('Failed to fetch user data', error);
             throw error;
         }
     };
