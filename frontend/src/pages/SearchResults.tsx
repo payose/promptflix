@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
-import { queryAIforMovieList } from '@/redux/movieSlice';
+import { queryMovies } from '@/redux/movieSlice';
 import { RootState, AppDispatch } from '@/redux/store';
 import MovieCard from '@/components/core/movieCard';
 import SearchBox from '@/components/core/SearchBox';
@@ -19,7 +19,7 @@ export default function SearchResultsPage() {
 
     useEffect(() => {
         if (query && !searchResults[query]) {
-            dispatch(queryAIforMovieList(query));
+            dispatch(queryMovies(query));
         }
     }, [query, dispatch, searchResults]);
 

@@ -58,7 +58,8 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
 
     const fetchMovieDetails = async (id: string | number) => {
         try {
-            const response = await APIService.getInstance('tmdb').get(`/movie/${id}`);
+            const response = await APIService.getInstance('backend').get(`/movies/${id}`);
+
             const details: MovieDetails = response.data;
 
             setDetails(details);
@@ -70,11 +71,11 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
     const fetchReviews = async () => {
             setIsLoadingReviews(true);
             try {
-                const response = await APIService.getInstance('tmdb').get(`/movie/${movie.id}/reviews`);
+                const response = await APIService.getInstance('backend').get(`/movies/${movie.id}/reviews`);
                 setReviews(response.data);
 
             } catch (error) {
-                console.error('Failed to fetch user data', error);
+                console.error('Failed to fetch reviews', error);
                 throw error;
 
             } finally {
@@ -132,9 +133,9 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Film className="text-green-400" />
-                                    {details.genres.map(genre => (
+                                    {details.genres?.map(genre => (
                                         <span key={genre.id}>{genre.name}</span>
-                                    ))}
+                                    )) || <span>No genres available</span>}
                                 </div>
                             </div>
 
