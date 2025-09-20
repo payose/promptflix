@@ -9,17 +9,22 @@ interface APIConfig {
 
 class APIService {
     private static configs: Record<string, APIConfig> = {
-        tmdb: {
-            baseURL: import.meta.env.VITE_APP_TMDB_BASE_URL || '',
-            apiKey: import.meta.env.VITE_APP_TMDB_API_KEY || '',
-            keyParam: 'api_key',
+        backend: {
+            baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+            apiKey: '',
             authType: 'urlParam'
         },
-        openai: {
-            baseURL: import.meta.env.VITE_APP_OPENAI_BASE_URL || '',
-            apiKey: import.meta.env.VITE_APP_OPENAI_API_KEY || '',
-            authType: 'headerBearer'
-        },
+        // tmdb: {
+        //     baseURL: import.meta.env.VITE_APP_TMDB_BASE_URL || '',
+        //     apiKey: import.meta.env.VITE_APP_TMDB_API_KEY || '',
+        //     keyParam: 'api_key',
+        //     authType: 'urlParam'
+        // },
+        // openai: {
+        //     baseURL: import.meta.env.VITE_APP_OPENAI_BASE_URL || '',
+        //     apiKey: import.meta.env.VITE_APP_OPENAI_API_KEY || '',
+        //     authType: 'headerBearer'
+        // },
         youtube: {
             baseURL: import.meta.env.VITE_APP_YOUTUBE_URL || '',
             apiKey: import.meta.env.VITE_APP_YOUTUBE_KEY || '',

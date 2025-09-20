@@ -10,7 +10,7 @@ const sectionQueries = [
     'mind-bending sci-fi movies that make you cringe',
     'Movies based on novel adaptations',
     'movies from parallel universes without any superheroes',
-    'movies that make you think about the meaning of life',
+    'movies that make you ponder on the meaning of life',
 ];
 
 
