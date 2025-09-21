@@ -120,7 +120,7 @@ export default function SectionResults() {
             }
         };
         fetchSectionMovies();
-    }, [dispatch, sectionResults]);
+    }, [dispatch]);
 
     return (
         <div className="mt-6 min-h-screen">
@@ -130,9 +130,9 @@ export default function SectionResults() {
                 </div>
             ) : (
                 sectionQueries.map((query, index) => (
-                    <MovieSection 
-                        key={index} 
-                        query={query} 
+                    <MovieSection
+                        key={index}
+                        query={query}
                         movies={sectionResults[query] || []}
                     />
                 ))
