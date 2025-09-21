@@ -47,59 +47,59 @@ const MovieSection = ({ query, movies }) => {
     return (
         <div className="relative group mb-12">
             {/* Section Header */}
-            <div className="flex items-center justify-between mb-4 px-4 md:px-8">
-                <h2 className="text-xl md:text-2xl font-bold text-white/85">
+            <div className="px-4 md:px-8">
+                <h2 className="text-base md:text-xl font-medium text-white/85 pb-4">
                     {query}
                 </h2>
-            </div>
 
-            {/* Movies Row */}
-            <div className="relative px-4 md:px-8">
-                {/* Left Arrow */}
-                {showLeftArrow && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => scroll('left')}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 z-40 rounded-full bg-black/50 text-white hover:bg-black/80 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 h-12 w-12"
+                {/* Movies Row */}
+                <div className="relative">
+                    {/* Left Arrow */}
+                    {showLeftArrow && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => scroll('left')}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 z-40 rounded-full bg-black/50 text-white hover:bg-black/80 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 h-12 w-12"
+                        >
+                            <ChevronLeft className="w-6 h-6" />
+                        </Button>
+                    )}
+
+                    {/* Right Arrow */}
+                    {showRightArrow && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => scroll('right')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 z-40 rounded-full bg-black/50 text-white hover:bg-black/90 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 h-12 w-12"
+                        >
+                            <ChevronRight className="w-6 h-6" />
+                        </Button>
+                    )}
+
+                    {/* Movies Container */}
+                    <div
+                        ref={scrollRef}
+                        onScroll={handleScroll}
+                        className="flex gap-4 overflow-x-auto scrollbar-hide pb-4"
+                        style={{
+                            scrollbarWidth: 'none',
+                            msOverflowStyle: 'none',
+                            WebkitScrollbar: { display: 'none' }
+                        }}
                     >
-                        <ChevronLeft className="w-6 h-6" />
-                    </Button>
-                )}
-
-                {/* Right Arrow */}
-                {showRightArrow && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => scroll('right')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 z-40 rounded-full bg-black/50 text-white hover:bg-black/90 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 h-12 w-12"
-                    >
-                        <ChevronRight className="w-6 h-6" />
-                    </Button>
-                )}
-
-                {/* Movies Container */}
-                <div
-                    ref={scrollRef}
-                    onScroll={handleScroll}
-                    className="flex gap-4 overflow-x-auto scrollbar-hide pb-4"
-                    style={{
-                        scrollbarWidth: 'none',
-                        msOverflowStyle: 'none',
-                        WebkitScrollbar: { display: 'none' }
-                    }}
-                >
-                    {movies.map((movie) => (
-                        <div key={movie.id} className="flex-none w-48 md:w-52">
-                            <MovieCard
-                                movie={movie}
-                                isHovered={hoveredMovie === movie.id}
-                                onHover={() => setHoveredMovie(movie.id)}
-                                onLeave={() => setHoveredMovie(null)}
-                            />
-                        </div>
-                    ))}
+                        {movies.map((movie) => (
+                            <div key={movie.id} className="flex-none w-28 md:w-52">
+                                <MovieCard
+                                    movie={movie}
+                                    isHovered={hoveredMovie === movie.id}
+                                    onHover={() => setHoveredMovie(movie.id)}
+                                    onLeave={() => setHoveredMovie(null)}
+                                />
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
