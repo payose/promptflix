@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, PlayCircle, Star, Clock, Film, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Movie, Review } from '@/types/movie';
 import { useLocation } from 'react-router-dom';
@@ -56,7 +56,7 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
         }
     }
 
-    const fetchMovieDetails = async (id: string | number) => {
+    const fetchMovieDetails = useCallback(async (id: string | number) => {
         try {
             const response = await APIService.getInstance('backend').get(`/movies/${id}`);
 
@@ -66,23 +66,23 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
         } catch (error) {
             throw error;
         }
-    };
+    }, []);
 
-    const fetchReviews = async () => {
-            setIsLoadingReviews(true);
-            try {
-                const response = await APIService.getInstance('backend').get(`/movies/${movie.id}/reviews`);
-                setReviews(response.data);
+    const fetchReviews = useCallback(async () => {
+        setIsLoadingReviews(true);
+        try {
+            const response = await APIService.getInstance('backend').get(`/movies/${movie.id}/reviews`);
+            setReviews(response.data);
 
-            } catch (error) {
-                console.error('Failed to fetch reviews', error);
-                throw error;
+        } catch (error) {
+            console.error('Failed to fetch reviews', error);
+            throw error;
 
-            } finally {
+        } finally {
 
-                setIsLoadingReviews(false);
-            }
-    };
+            setIsLoadingReviews(false);
+        }
+    }, [movie.id]);
 
     useEffect(() => {
         fetchMovieDetails(movie.id);
@@ -195,8 +195,8 @@ const MoviePage: React.FC<MovieDetailsProps> = () => {
                                     )}
                                 </>
                             )}
-                            </div>
                         </div>
+                    </div>
 
                     {/* Trailer Modal */}
                     {activeTrailer && (
