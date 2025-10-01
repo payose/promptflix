@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./backend
+    container_name: promptflix-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app  # hot reload (dev)
+    env_file:
+      - ./backend/.env
+    environment:
+      - PYTHONPATH=/app
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: promptflix-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
