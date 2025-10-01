@@ -14,13 +14,18 @@ const sectionQueries = [
 ];
 
 
-const MovieSection = ({ query, movies }) => {
-    const scrollRef = useRef(null);
-    const [hoveredMovie, setHoveredMovie] = useState(null);
+interface MovieSectionProps {
+    query: string;
+    movies: any[];
+}
+
+const MovieSection = ({ query, movies }: MovieSectionProps) => {
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [hoveredMovie, setHoveredMovie] = useState<number | null>(null);
     const [showLeftArrow, setShowLeftArrow] = useState(false);
     const [showRightArrow, setShowRightArrow] = useState(true);
 
-    const scroll = (direction) => {
+    const scroll = (direction: 'left' | 'right') => {
         if (scrollRef.current) {
             const scrollAmount = scrollRef.current.clientWidth * 0.8;
             const newScrollLeft = scrollRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
@@ -85,11 +90,10 @@ const MovieSection = ({ query, movies }) => {
                         className="flex gap-4 overflow-x-auto scrollbar-hide pb-4"
                         style={{
                             scrollbarWidth: 'none',
-                            msOverflowStyle: 'none',
-                            WebkitScrollbar: { display: 'none' }
-                        }}
+                            msOverflowStyle: 'none'
+                        } as React.CSSProperties}
                     >
-                        {movies.map((movie) => (
+                        {movies.map((movie: any) => (
                             <div key={movie.id} className="flex-none w-28 md:w-52">
                                 <MovieCard
                                     movie={movie}

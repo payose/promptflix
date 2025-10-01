@@ -6,10 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import ReviewCard from "@/components/core/reviews"
 import APIService from "@/api/axios"
 
-interface MovieDetailsProps {
-    movie: Movie;
-}
-
 interface MovieDetails extends Movie {
     runtime: number;
     trailer_key?: string;
@@ -30,7 +26,7 @@ interface ReviewsResponse {
     total_results: number;
 }
 
-const MoviePage: React.FC<MovieDetailsProps> = () => {
+const MoviePage: React.FC = () => {
     const navigate = useNavigate();
     const { state } = useLocation();
     const movie = state.movie;

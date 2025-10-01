@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-// import { Badge } from '@/components/ui/badge';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { Star, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
+import type { EmblaCarouselType } from 'embla-carousel';
 
 // Mock trending movies data (replace with TMDB API call)
 
@@ -74,8 +72,7 @@ const mockMovies = [
 ];
 
 const TrendingMoviesCarousel = () => {
-    const [api, setApi] = useState(null);
-    const [current, setCurrent] = useState(0);
+    const [api, setApi] = useState<EmblaCarouselType>();
     const [movies] = useState(mockMovies);
 
     // Auto-scroll functionality
@@ -98,13 +95,9 @@ const TrendingMoviesCarousel = () => {
         if (!api) return;
 
         api.on('select', () => {
-            setCurrent(api.selectedScrollSnap());
+            // Track current slide if needed
         });
     }, [api]);
-
-    const formatDate = (dateString) => {
-        return new Date(dateString).getFullYear();
-    };
 
     return (
         <div className="w-full relative">
@@ -117,7 +110,7 @@ const TrendingMoviesCarousel = () => {
                 }}
             >
                 <CarouselContent className="h-full">
-                    {movies.map((movie, index) => (
+                    {movies.map((movie) => (
                         <CarouselItem key={movie.id} className="h-full">
                             <div
                                 className="w-full h-[40vh] flex relative rounded-lg overflow-hidden"

@@ -1,5 +1,4 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { useState } from 'react';
 import type { Movie } from '@/types/movie';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom'
@@ -35,8 +34,8 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeav
                                 src={`http://image.tmdb.org/t/p/w500/${movie.poster_path}`}
                                 alt={movie.title}
                                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                                onError={(e) => {
-                                    e.target.src = `https://via.placeholder.com/300x450/1a1a1a/white?text=${encodeURIComponent(movie.title)}`;
+                                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                                    e.currentTarget.src = `https://via.placeholder.com/300x450/1a1a1a/white?text=${encodeURIComponent(movie.title)}`;
                                 }}
                             />
 
