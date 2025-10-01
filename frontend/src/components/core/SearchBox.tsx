@@ -5,7 +5,6 @@ import { RootState } from "@/redux/store";
 import { useNavigate } from 'react-router-dom';
 
 export default function SearchBox() {
-    const [scrolled, setScrolled] = useState(false)
     const [query, setQuery] = useState('');
     const { loading } = useSelector((state: RootState) => state.movies);
 
@@ -14,26 +13,6 @@ export default function SearchBox() {
         const params = new URLSearchParams(window.location.search);
         return params.get('q') || '';
     };
-
-    // Update URL without page reload
-    // const updateUrl = (searchQuery: string) => {
-    //     const url = new URL(window.location);
-    //     if (searchQuery.trim()) {
-    //         url.searchParams.set('q', searchQuery);
-    //     } else {
-    //         url.searchParams.delete('q');
-    //     }
-    //     window.history.pushState({}, '', url);
-    // };
-
-    useEffect(() => {
-        const handleScroll = () => {
-            setScrolled(window.scrollY > 10)
-        }
-
-        window.addEventListener('scroll', handleScroll)
-        return () => window.removeEventListener('scroll', handleScroll)
-    }, [])
 
     // Initialize search from URL on component mount
     useEffect(() => {
