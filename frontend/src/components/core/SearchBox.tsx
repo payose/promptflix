@@ -56,7 +56,7 @@ export default function SearchBox() {
 
     return (
         <div className="w-full">
-            <div className="relative w-full flex items-center rounded-full border-[0.5px] border-gray-700 focus-within:shadow-sm focus-within:shadow-pink-500/40 transition-all">
+            <div className="relative w-full flex items-center rounded-full border-[0.5px] border-cyan-900 focus-within:shadow-sm focus-within:shadow-purple-500/40 transition-all">
                 <input
                     type="text"
                     value={query}
