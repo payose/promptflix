@@ -115,16 +115,16 @@ const MoviePage: React.FC = () => {
 
                         {/* Movie Details */}
                         <div className="text-gray-100">
-                            <h1 className="text-4xl font-bold mb-4">{details.title}</h1>
+                            <h1 className="text-lg 2xl:text-2xl font-bold mb-4">{details.title}</h1>
 
                             {/* Quick Stats */}
-                            <div className="flex items-center gap-4 mb-4">
+                            <div className="flex flex-wrap items-center text-sm xl:text-base gap-4 mb-4">
                                 <div className="flex items-center gap-2">
                                     <Star className="text-yellow-500" />
                                     <span>{details.vote_average}/10</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Clock className="text-blue-400" />
+                                    <Clock className="text-red-400" />
                                     <span>{details.runtime} mins</span>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -136,12 +136,12 @@ const MoviePage: React.FC = () => {
                             </div>
 
                             {/* Overview */}
-                            <p className="text-gray-300 mb-6">{details.overview}</p>
+                            <p className="text-sm xl:text-base text-gray-300 mb-6">{details.overview}</p>
 
                             {/* Trailer Button */}
                             <button
                                 onClick={() => getYoutubeTrailer(details.title)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+                                className="bg-cyan-600 hover:bg-cyan-700 text-sm text-white px-6 py-3 rounded-lg flex items-center gap-2"
                             >
                                 <PlayCircle /> Watch Trailer
                             </button>
@@ -151,7 +151,7 @@ const MoviePage: React.FC = () => {
                     {/* Reviews Section */}
                     <div className="mt-16 grid md:grid-cols-[1fr_400px]">
                         <div>
-                            <h2 className="text-2xl text-gray-200 mb-6">
+                            <h2 className="text-lg xl:text-2xl text-gray-200 mb-6">
                                 Reviews {reviews && `(${reviews.total_results})`}
                             </h2>
 

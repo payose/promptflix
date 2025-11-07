@@ -7,7 +7,7 @@ export default function Header() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 200)
+      setScrolled(window.scrollY > 100)
     }
 
     window.addEventListener('scroll', handleScroll)
@@ -17,11 +17,11 @@ export default function Header() {
   return (
     <header
         className={`
-            fixed top-0 w-full z-50 border-b border-white/10 transition-all
+            fixed top-0 w-full z-50 border-b-[0.5px] border-cyan-900 transition-all
             ${scrolled ? 'bg-gray-900' : 'bg-gray-900/10'} 
         `}
     >
-      <div className="flex gap-6 items-center justify-between h-16 mx-auto px-4 sm:px-6 lg:px-24">
+      <div className="flex gap-6 items-center justify-between py-5 mx-auto px-4 sm:px-6 lg:px-24">
         {/* Logo */}
         <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-pink-600">
             PromptFlix
@@ -39,7 +39,7 @@ export default function Header() {
 
         {/* Movie List Button */}
         <div>
-          <Button variant="ghost" className="text-gray-300 border-none bg-pink-600 hover:text-white">
+          <Button variant="ghost" className="text-gray-300 border-none bg-cyan-600 hover:text-white">
             Movie List
           </Button>
         </div>

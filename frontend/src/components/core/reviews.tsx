@@ -30,7 +30,7 @@ const ReviewCard: React.FC<{ review: Review }> = ({ review }) => {
             className="w-10 h-10 rounded-full object-cover"
           />
           <div className="flex-1">
-            <h4 className="text-gray-200 font-medium">
+            <h4 className="text-xs xl:text-sm text-gray-200 font-medium">
               {review.author_details.name || review.author_details.username || review.author}
             </h4>
             <div className="flex items-center gap-2">
@@ -40,7 +40,7 @@ const ReviewCard: React.FC<{ review: Review }> = ({ review }) => {
                   <span className="text-yellow-500 text-xs">{review.author_details.rating}/10</span>
                 </div>
               )}
-              <span className="text-gray-400 text-sm">
+              <span className="text-gray-400 text-xs">
                 {formatDate(review.created_at)}
               </span>
             </div>
@@ -48,14 +48,14 @@ const ReviewCard: React.FC<{ review: Review }> = ({ review }) => {
         </div>
   
         {/* Review Content */}
-        <div className="text-gray-300">
-          <p className={`${!isExpanded && 'line-clamp-2'} text-sm`}>
+        <div className="text-xs xl:text-sm text-gray-300">
+          <p className={`${!isExpanded && 'line-clamp-2'}`}>
             {review.content}
           </p>
           {review.content.length > 200 && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-blue-400 hover:text-blue-300 bg-transparent text-sm mt-2 flex items-center gap-1 p-1 border-none outline-none"
+              className="text-cyan-400 hover:text-cyan-300 bg-transparent text-sm mt-2 flex items-center gap-1 p-1 border-none outline-none"
             >
               {isExpanded ? 'Show less' : 'Read more'}
               <ChevronDown className={`w-4 h-4 transform ${isExpanded ? 'rotate-180' : ''}`} />
