@@ -326,6 +326,17 @@ def get_movie_reviews(movie_id: int) -> Dict[str, Any]:
         logger.error(f"Error getting movie reviews for ID {movie_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to get movie reviews")
 
+# Get watch providers for a specific movie
+@app.get("/api/movies/{movie_id}/watch/providers")
+def get_movie_watch_providers(movie_id: int) -> Dict[str, Any]:
+    """Get streaming/rental/purchase availability for a specific movie"""
+    try:
+        data = make_tmdb_request(f"/movie/{movie_id}/watch/providers")
+        return data
+    except Exception as e:
+        logger.error(f"Error getting watch providers for ID {movie_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get watch providers")
+
 # Cache management endpoints
 @app.delete("/api/cache/search")
 def clear_search_cache():
@@ -396,6 +407,8 @@ def root():
             "search": "GET /api/movies/search?query=...",
             "section": "GET /api/movies/section?query=...",
             "movie_details": "GET /api/movies/{movie_id}",
+            "movie_reviews": "GET /api/movies/{movie_id}/reviews",
+            "watch_providers": "GET /api/movies/{movie_id}/watch/providers",
             "fetch_details": "POST /api/movies/fetch-details",
             "direct_tmdb": "GET /api/tmdb/search?query=..."
         }

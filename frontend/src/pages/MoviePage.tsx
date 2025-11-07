@@ -26,6 +26,25 @@ interface ReviewsResponse {
     total_results: number;
 }
 
+interface WatchProvider {
+    logo_path: string;
+    provider_id: number;
+    provider_name: string;
+    display_priority: number;
+}
+
+interface CountryWatchProviders {
+    link?: string;
+    flatrate?: WatchProvider[];
+}
+
+interface WatchProvidersResponse {
+    id: number;
+    results: {
+        [countryCode: string]: CountryWatchProviders;
+    };
+}
+
 const MoviePage: React.FC = () => {
     const navigate = useNavigate();
     const { state } = useLocation();
@@ -37,6 +56,7 @@ const MoviePage: React.FC = () => {
     const [reviews, setReviews] = useState<ReviewsResponse | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoadingReviews, setIsLoadingReviews] = useState(false);
+    const [watchProviders, setWatchProviders] = useState<WatchProvidersResponse | null>(null);
 
     const goBack = () => {
         navigate(-1);
@@ -80,8 +100,18 @@ const MoviePage: React.FC = () => {
         }
     }, [movie.id]);
 
+    const fetchWatchProviders = useCallback(async () => {
+        try {
+            const response = await APIService.getInstance('backend').get(`/movies/${movie.id}/watch/providers`);
+            setWatchProviders(response.data);
+        } catch (error) {
+            console.error('Failed to fetch watch providers', error);
+        }
+    }, [movie.id]);
+
     useEffect(() => {
         fetchMovieDetails(movie.id);
+        fetchWatchProviders();
     }, [movie]);
 
     useEffect(() => {
@@ -147,6 +177,40 @@ const MoviePage: React.FC = () => {
                             </button>
                         </div>
                     </div>
+
+                    {/* Streaming Providers Section */}
+                    {watchProviders && watchProviders.results.US && (
+                        <div className="mt-12 m-auto">
+                            <h2 className="text-sm xl:text-base text-gray-200 mb-6">
+                                Where to Stream
+                            </h2>
+
+                            <div className="space-y-6">
+                                {/* Streaming Services */}
+                                {watchProviders.results.US.flatrate && watchProviders.results.US.flatrate.length > 0 && (
+                                    <div className="flex flex-wrap gap-4">
+                                        {watchProviders.results.US.flatrate.map(provider => (
+                                            <div key={provider.provider_id} className="flex flex-col items-center gap-2">
+                                                <img
+                                                    src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
+                                                    alt={provider.provider_name}
+                                                    className="w-16 h-16 rounded-lg"
+                                                />
+                                                <span className="text-xs text-gray-400 text-center max-w-[80px]">
+                                                    {provider.provider_name}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* JustWatch Attribution */}
+                            <p className="text-xs text-gray-500 mt-4">
+                                Streaming data provided by <a href="https://www.justwatch.com/" target="_blank" rel="noopener noreferrer" className="text-cyan-500 hover:underline">JustWatch</a>
+                            </p>
+                        </div>
+                    )}
 
                     {/* Reviews Section */}
                     <div className="mt-16 grid md:grid-cols-[1fr_400px]">
