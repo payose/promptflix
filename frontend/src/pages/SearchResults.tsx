@@ -12,6 +12,7 @@ export default function SearchResultsPage() {
     const location = useLocation();
     const { partialSearches, loading, error } = useSelector((state: RootState) => state.movies);
     const [hoveredMovieId, setHoveredMovieId] = useState<string | number | null>(null);
+    const [isStreaming, setIsStreaming] = useState(false);
     const { streamMovies } = useMovieStreaming({ type: 'search' });
 
     const searchParams = new URLSearchParams(location.search);
@@ -19,9 +20,17 @@ export default function SearchResultsPage() {
 
     useEffect(() => {
         if (query && !partialSearches[query]) {
+            setIsStreaming(true);
             streamMovies(query);
         }
     }, [query, partialSearches, streamMovies]);
+
+    // Stop showing streaming indicator once we have movies
+    useEffect(() => {
+        if (partialSearches[query] && partialSearches[query].length > 0) {
+            setIsStreaming(false);
+        }
+    }, [partialSearches, query]);
 
     const movies = partialSearches[query] || [];
 
@@ -42,10 +51,10 @@ export default function SearchResultsPage() {
                     </div>
                 )}
 
-                {loading && movies.length === 0 && (
-                    <div className="flex items-center justify-center py-20">
-                        <Loader2 className="h-8 w-8 text-pink-500 animate-spin" />
-                        <span className="ml-2 text-gray-400">Finding movies for you...</span>
+                {(loading || isStreaming) && movies.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <Loader2 className="h-12 w-12 text-pink-500 animate-spin mb-4" />
+                        <span className="text-gray-400">Finding movies for you...</span>
                     </div>
                 )}
 
@@ -55,7 +64,7 @@ export default function SearchResultsPage() {
                     </div>
                 )}
 
-                {!loading && movies.length === 0 && query && (
+                {!loading && !isStreaming && movies.length === 0 && query && (
                     <div className="text-center py-20">
                         <p className="text-gray-400">No movies found for your search.</p>
                     </div>

@@ -118,6 +118,7 @@ const MovieSection = ({ query, movies }: MovieSectionProps) => {
 export default function SectionResults() {
     const { partialSections, sectionLoading } = useSelector((state: RootState) => state.movies);
     const { streamMovies } = useMovieStreaming({ type: 'section' });
+    const [initialLoading, setInitialLoading] = useState(true);
 
     useEffect(() => {
         const fetchSectionMovies = async () => {
@@ -127,6 +128,8 @@ export default function SectionResults() {
                     await streamMovies(query);
                 }
             }
+            // Once all queries are done or cached, stop initial loading
+            setInitialLoading(false);
         };
 
         fetchSectionMovies();
@@ -134,9 +137,10 @@ export default function SectionResults() {
 
     return (
         <div className="mt-6 min-h-screen">
-            {sectionLoading && Object.keys(partialSections).length === 0 ? (
-                <div className="flex items-center justify-center py-20">
-                    <div className="text-gray-400">Loading sections...</div>
+            {(sectionLoading || initialLoading) && Object.keys(partialSections).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                    <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <div className="text-gray-400">Finding the perfect movies for you...</div>
                 </div>
             ) : (
                 sectionQueries.map((query, index) => (
