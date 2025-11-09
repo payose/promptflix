@@ -2,6 +2,12 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import APIService from "@/api/axios";
 import type { Movie } from "@/types/movie";
 
+interface PartialMovie {
+  title: string;
+  year: number;
+  isLoading?: boolean;
+}
+
 interface MovieState {
   loading: boolean;
   movies: Movie[];
@@ -11,6 +17,9 @@ interface MovieState {
   sectionLoading: boolean;
   sectionError: string | null;
   error: string | null;
+  // For progressive loading
+  partialSections: Record<string, (Movie | PartialMovie)[]>;
+  partialSearches: Record<string, (Movie | PartialMovie)[]>;
 }
 
 const initialState: MovieState = {
@@ -22,6 +31,8 @@ const initialState: MovieState = {
   sectionLoading: false,
   sectionError: null,
   error: null,
+  partialSections: {},
+  partialSearches: {},
 };
 
 /**
@@ -94,6 +105,64 @@ const movieSlice = createSlice({
     clearSearchCache: (state) => {
       state.searchResults = {};
     },
+    // Progressive loading reducers - Sections
+    setInitialMovies: (state, action: PayloadAction<{ query: string; movies: PartialMovie[] }>) => {
+      state.partialSections[action.payload.query] = action.payload.movies.map(m => ({
+        ...m,
+        isLoading: true
+      }));
+      state.sectionLoading = false;
+    },
+    updateMovieDetail: (state, action: PayloadAction<{ query: string; index: number; movie: Movie }>) => {
+      const { query, index, movie } = action.payload;
+      if (state.partialSections[query] && state.partialSections[query][index]) {
+        state.partialSections[query][index] = movie;
+      }
+    },
+    completeSectionLoading: (state, action: PayloadAction<{ query: string }>) => {
+      const { query } = action.payload;
+      if (state.partialSections[query]) {
+        // Move from partial to full results
+        state.sectionResults[query] = state.partialSections[query].filter(
+          (m): m is Movie => 'id' in m && m.id !== undefined
+        );
+      }
+    },
+    setSectionFromCache: (state, action: PayloadAction<{ query: string; movies: Movie[] }>) => {
+      state.sectionResults[action.payload.query] = action.payload.movies;
+      state.partialSections[action.payload.query] = action.payload.movies;
+      state.sectionLoading = false;
+    },
+    // Progressive loading reducers - Search
+    setInitialSearchMovies: (state, action: PayloadAction<{ query: string; movies: PartialMovie[] }>) => {
+      state.partialSearches[action.payload.query] = action.payload.movies.map(m => ({
+        ...m,
+        isLoading: true
+      }));
+      state.loading = false;
+    },
+    updateSearchMovieDetail: (state, action: PayloadAction<{ query: string; index: number; movie: Movie }>) => {
+      const { query, index, movie } = action.payload;
+      if (state.partialSearches[query] && state.partialSearches[query][index]) {
+        state.partialSearches[query][index] = movie;
+      }
+    },
+    completeSearchLoading: (state, action: PayloadAction<{ query: string }>) => {
+      const { query } = action.payload;
+      if (state.partialSearches[query]) {
+        // Move from partial to full results
+        state.searchResults[query] = state.partialSearches[query].filter(
+          (m): m is Movie => 'id' in m && m.id !== undefined
+        );
+        state.movies = state.searchResults[query];
+      }
+    },
+    setSearchFromCache: (state, action: PayloadAction<{ query: string; movies: Movie[] }>) => {
+      state.searchResults[action.payload.query] = action.payload.movies;
+      state.partialSearches[action.payload.query] = action.payload.movies;
+      state.movies = action.payload.movies;
+      state.loading = false;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -139,6 +208,14 @@ export const {
   resetMovieSection,
   clearSearchCache,
   clearSectionCache,
+  setInitialMovies,
+  updateMovieDetail,
+  completeSectionLoading,
+  setSectionFromCache,
+  setInitialSearchMovies,
+  updateSearchMovieDetail,
+  completeSearchLoading,
+  setSearchFromCache,
 } = movieSlice.actions;
 
 export default movieSlice.reducer;

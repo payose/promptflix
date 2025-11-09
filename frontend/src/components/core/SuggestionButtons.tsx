@@ -2,8 +2,8 @@ import { Button } from "@/components/ui/button"
 import { useNavigate } from 'react-router-dom';
 
 const suggestedQueries = [
-    'A mind-bending sci-fi movie like Inception',
-    'Feel-good romantic comedies from the 90s',
+    'small town horror movies',
+    'Movies with irredeemable villains',
     'Movies directed by Christopher Nolan',
     'Feel-good romantic comedies from the 90s',
 ]
