@@ -25,20 +25,31 @@ app = FastAPI(
 
 # CORS configuration
 # Get allowed origins from environment variable or use default
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "").split(",") if os.getenv("ALLOWED_ORIGINS") else [
-    "http://localhost:3000",  # React dev server
-    "http://localhost:5173",  # Vite dev server
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-]
+ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", "")
+if ALLOWED_ORIGINS_ENV:
+    # Remove empty strings from split
+    ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
+else:
+    ALLOWED_ORIGINS = [
+        "http://localhost:3000",  # React dev server
+        "http://localhost:5173",  # Vite dev server
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ]
 
+# For development, allow all origins. In production, use specific origins
+# You can also use ["*"] to allow all origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS if ALLOWED_ORIGINS else ["*"],
+    allow_credentials=False,  # Set to False when using wildcard origins
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# Log CORS configuration
+logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
 
 # Environment variables
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
@@ -63,17 +74,13 @@ section_cache: Dict[str, List[Dict[str, Any]]] = {}
 
 def get_cors_headers():
     """Get CORS headers for streaming responses"""
-    # If ALLOWED_ORIGINS is set to specific domains, use the first one
-    # In production with multiple origins, you'd want to check the request Origin header
-    if ALLOWED_ORIGINS and ALLOWED_ORIGINS[0]:
-        origin = ALLOWED_ORIGINS[0] if len(ALLOWED_ORIGINS) == 1 else "*"
-    else:
-        origin = "*"
-
+    # Allow all origins for streaming endpoints
+    # The CORSMiddleware handles the actual origin validation
     return {
-        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Access-Control-Allow-Headers": "*",
+        "Access-Control-Expose-Headers": "*",
     }
 
 def transform_tmdb_movie(movie_data: Dict[str, Any]) -> Dict[str, Any]:
