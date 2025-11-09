@@ -5,6 +5,7 @@ import { RootState } from '@/redux/store';
 import MovieCard from '@/components/core/movieCard';
 import SearchBox from '@/components/core/SearchBox';
 import Header from '@/components/core/Header';
+import SEO from '@/components/SEO/SEO';
 import { Loader2 } from 'lucide-react';
 import { useMovieStreaming } from '@/hooks/useMovieStreaming';
 
@@ -17,6 +18,15 @@ export default function SearchResultsPage() {
 
     const searchParams = new URLSearchParams(location.search);
     const query = searchParams.get('q') || '';
+    const movies = partialSearches[query] || [];
+
+    // Generate SEO metadata
+    const pageTitle = query
+        ? `${query} - Movie Search Results`
+        : 'Search Movies';
+    const pageDescription = query
+        ? `Discover ${query} with AI-powered movie recommendations. Browse through personalized movie suggestions and find your next favorite film.`
+        : 'Search for movies using natural language and get AI-powered recommendations instantly.';
 
     useEffect(() => {
         if (query && !partialSearches[query]) {
@@ -32,10 +42,14 @@ export default function SearchResultsPage() {
         }
     }, [partialSearches, query]);
 
-    const movies = partialSearches[query] || [];
-
     return (
         <div className="min-h-screen bg-black text-white">
+            <SEO
+                title={pageTitle}
+                description={pageDescription}
+                url={`/search?q=${encodeURIComponent(query)}`}
+                keywords={`${query}, movies, AI recommendations, film search, movie discovery`}
+            />
             <Header />
 
             <div className="container mx-auto px-4 py-8">

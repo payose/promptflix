@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import ReviewCard from "@/components/core/reviews"
 import APIService from "@/api/axios"
+import SEO from '@/components/SEO/SEO';
 
 interface MovieDetails extends Movie {
     runtime: number;
@@ -118,10 +119,38 @@ const MoviePage: React.FC = () => {
         fetchReviews();
     }, [movie, currentPage]);
 
+    // Generate structured data for the movie
+    const movieStructuredData = details ? {
+        "@context": "https://schema.org",
+        "@type": "Movie",
+        "name": details.title,
+        "description": details.overview,
+        "datePublished": details.release_date,
+        "image": `http://image.tmdb.org/t/p/w500/${details.backdrop_path}`,
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": details.vote_average,
+            "bestRating": "10",
+            "worstRating": "6.5"
+        },
+        "genre": details.genres?.map(g => g.name).join(', '),
+        "duration": `PT${details.runtime}M`
+    } : null;
+
     return (
         <div className="fixed inset-0 z-50 bg-gray-900 overflow-y-auto">
             {details && (
-                <div className="container mx-auto p-6">
+                <>
+                    <SEO
+                        title={`${details.title} (${new Date(details.release_date).getFullYear()})`}
+                        description={details.overview || `Watch ${details.title} and discover similar movies on PromptFlix.`}
+                        image={`http://image.tmdb.org/t/p/w500/${details.backdrop_path}`}
+                        url={`/movies/${details.id}`}
+                        type="video.movie"
+                        keywords={`${details.title}, ${details.genres?.map(g => g.name).join(', ')}, watch movie, movie details`}
+                        {...(movieStructuredData && { structuredData: movieStructuredData })}
+                    />
+                    <div className="container mx-auto p-6">
                     {/* Header with Back Button */}
                     <button
                         onClick={goBack}
@@ -279,6 +308,7 @@ const MoviePage: React.FC = () => {
                         </div>
                     )}
                 </div>
+                </>
             )}
         </div>
     );
