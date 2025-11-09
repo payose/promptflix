@@ -3,9 +3,7 @@ import { useSelector } from 'react-redux';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import MovieCard from '@/components/core/movieCard';
-import MovieCardSkeleton from '@/components/core/MovieCardSkeleton';
 import { RootState } from '@/redux/store';
-import type { Movie } from '@/types/movie';
 import { useMovieStreaming } from '@/hooks/useMovieStreaming';
 
 const sectionQueries = [
@@ -18,12 +16,12 @@ const sectionQueries = [
 
 interface MovieSectionProps {
     query: string;
-    movies: (Movie | { title: string; year: number; isLoading?: boolean })[];
+    movies: any[];
 }
 
 const MovieSection = ({ query, movies }: MovieSectionProps) => {
     const scrollRef = useRef<HTMLDivElement>(null);
-    const [hoveredMovie, setHoveredMovie] = useState<number | null>(null);
+    const [hoveredMovie, setHoveredMovie] = useState<number | string | null>(null);
     const [showLeftArrow, setShowLeftArrow] = useState(false);
     const [showRightArrow, setShowRightArrow] = useState(true);
 
@@ -50,10 +48,6 @@ const MovieSection = ({ query, movies }: MovieSectionProps) => {
     if (!movies || movies.length === 0) {
         return null;
     }
-
-    const isFullMovie = (movie: any): movie is Movie => {
-        return 'id' in movie && movie.id !== undefined;
-    };
 
     return (
         <div className="relative group mb-12">
@@ -99,23 +93,21 @@ const MovieSection = ({ query, movies }: MovieSectionProps) => {
                             msOverflowStyle: 'none'
                         } as React.CSSProperties}
                     >
-                        {movies.map((movie, index) => (
-                            <div key={isFullMovie(movie) ? movie.id : `${movie.title}-${index}`} className="flex-none w-28 md:w-52">
-                                {isFullMovie(movie) ? (
+                        {movies.map((movie, index) => {
+                            const isFullMovie = 'id' in movie && movie.id !== undefined;
+                            const movieId = isFullMovie ? movie.id : `${movie.title}-${index}`;
+
+                            return (
+                                <div key={movieId} className="flex-none w-28 md:w-52">
                                     <MovieCard
                                         movie={movie}
-                                        isHovered={hoveredMovie === movie.id}
-                                        onHover={() => setHoveredMovie(movie.id)}
-                                        onLeave={() => setHoveredMovie(null)}
+                                        isHovered={isFullMovie && hoveredMovie === movie.id}
+                                        onHover={isFullMovie ? () => setHoveredMovie(movie.id) : undefined}
+                                        onLeave={isFullMovie ? () => setHoveredMovie(null) : undefined}
                                     />
-                                ) : (
-                                    <MovieCardSkeleton
-                                        title={movie.title}
-                                        year={movie.year}
-                                    />
-                                )}
-                            </div>
-                        ))}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>

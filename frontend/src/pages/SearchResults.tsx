@@ -3,12 +3,10 @@ import { useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { RootState } from '@/redux/store';
 import MovieCard from '@/components/core/movieCard';
-import MovieCardSkeleton from '@/components/core/MovieCardSkeleton';
 import SearchBox from '@/components/core/SearchBox';
 import Header from '@/components/core/Header';
 import { Loader2 } from 'lucide-react';
 import { useMovieStreaming } from '@/hooks/useMovieStreaming';
-import type { Movie } from '@/types/movie';
 
 export default function SearchResultsPage() {
     const location = useLocation();
@@ -26,9 +24,6 @@ export default function SearchResultsPage() {
     }, [query, partialSearches, streamMovies]);
 
     const movies = partialSearches[query] || [];
-    const isFullMovie = (movie: any): movie is Movie => {
-        return 'id' in movie && movie.id !== undefined;
-    };
 
     return (
         <div className="min-h-screen bg-black text-white">
@@ -68,23 +63,20 @@ export default function SearchResultsPage() {
 
                 {movies.length > 0 && (
                     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                        {movies.map((movie, index) => (
-                            // <div key={isFullMovie(movie) ? movie.id : `${movie.title}-${index}`}>
-                            //     {isFullMovie(movie) ? (
-                            //         <MovieCard
-                            //             movie={movie}
-                            //             isHovered={hoveredMovieId === movie.id}
-                            //             onHover={() => setHoveredMovieId(movie.id)}
-                            //             onLeave={() => setHoveredMovieId(null)}
-                            //         />
-                            //     ) : (
-                                    <MovieCardSkeleton
-                                        title={movie.title}
-                                        year={movie.year}
-                                    />
-                                // )}
-                            // </div>
-                        ))}
+                        {movies.map((movie, index) => {
+                            const isFullMovie = 'id' in movie && movie.id !== undefined;
+                            const movieId = isFullMovie ? movie.id : `${movie.title}-${index}`;
+
+                            return (
+                                <MovieCard
+                                    key={movieId}
+                                    movie={movie}
+                                    isHovered={isFullMovie && hoveredMovieId === movie.id}
+                                    onHover={isFullMovie ? () => setHoveredMovieId(movie.id) : undefined}
+                                    onLeave={isFullMovie ? () => setHoveredMovieId(null) : undefined}
+                                />
+                            );
+                        })}
                     </div>
                 )}
             </div>

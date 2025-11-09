@@ -4,8 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom'
 import { Star, Play, Plus } from 'lucide-react';
 
+interface PartialMovie {
+    title: string;
+    year: number;
+    isLoading?: boolean;
+}
+
 interface MovieCardProps {
-    movie: Movie;
+    movie: Movie | PartialMovie;
     onSelect?: (movie: Movie) => void;
     isHovered?: boolean;
     onHover?: () => void;
@@ -13,65 +19,117 @@ interface MovieCardProps {
 }
 
 const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeave }) => {
-    const moviePageProp = {
-        movie: movie,
+    // Check if movie is fully loaded
+    const isFullMovie = (m: Movie | PartialMovie): m is Movie => {
+        return 'id' in m && m.id !== undefined;
     };
 
-    return (
+    const isLoading = !isFullMovie(movie);
+    const fullMovie = isFullMovie(movie) ? movie : null;
+
+    const moviePageProp = fullMovie ? {
+        movie: fullMovie,
+    } : null;
+
+    const cardContent = (
         <div
-            className="relative group cursor-pointer transition-all duration-300 ease-out overflow-hidden rounded-lg"
-            onMouseEnter={onHover}
-            onMouseLeave={onLeave}
+            className={`relative group ${isLoading ? 'cursor-default' : 'cursor-pointer'} transition-all duration-300 ease-out overflow-hidden rounded-lg`}
+            onMouseEnter={isLoading ? undefined : onHover}
+            onMouseLeave={isLoading ? undefined : onLeave}
         >
-            <Link to={`/movies/${movie.id}`} state={moviePageProp}>
 
-                <Card className={`overflow-hidden bg-gray-900 border-gray-700 transition-all duration-300 ${isHovered ? 'scale-105 z-50 shadow-2xl' : 'hover:scale-102'
-                    }`}>
-                    <CardContent className="p-0 relative">
-                        <div className="aspect-[2/3] relative overflow-hidden">
-
-                            <img
-                                src={`http://image.tmdb.org/t/p/w500/${movie.poster_path}`}
-                                alt={movie.title}
-                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                                    e.currentTarget.src = `https://via.placeholder.com/300x450/1a1a1a/white?text=${encodeURIComponent(movie.title)}`;
-                                }}
+            <Card className={`overflow-hidden bg-gray-900 border-gray-700 transition-all duration-300 ${!isLoading && isHovered ? 'scale-105 z-50 shadow-2xl' : 'hover:scale-102'}`}>
+                <CardContent className="p-0 relative">
+                    <div className="aspect-[2/3] relative overflow-hidden bg-gray-800">
+                        {isLoading ? (
+                            // Loading state with shimmer
+                            <div className="absolute inset-0 bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 animate-shimmer"
+                                 style={{
+                                     backgroundSize: '200% 100%',
+                                     animation: 'shimmer 1.5s infinite'
+                                 }}
                             />
+                        ) : (
+                            // Loaded state with image
+                            <>
+                                <img
+                                    src={`http://image.tmdb.org/t/p/w500/${fullMovie!.poster_path}`}
+                                    alt={fullMovie!.title}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                    onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                                        e.currentTarget.src = `https://via.placeholder.com/300x450/1a1a1a/white?text=${encodeURIComponent(fullMovie!.title)}`;
+                                    }}
+                                />
 
-                            {/* Overlay that appears on hover */}
-                            <div className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'
-                                }`}>
-                                <div className="absolute bottom-0 left-0 right-0 p-4">
-                                    <h3 className="text-white/90 font-bold text-sm mb-1 line-clamp-2">
-                                        {movie.title}
-                                    </h3>
+                                {/* Overlay that appears on hover - only when loaded */}
+                                <div className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
+                                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                                        <h3 className="text-white/90 font-bold text-sm mb-1 line-clamp-2">
+                                            {fullMovie!.title}
+                                        </h3>
 
-                                    <div className="flex gap-2 mb-2 text-xs text-gray-300">
-                                        <div className="flex items-center gap-1">
-                                            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                                            <span>{movie.vote_average.toFixed(1)}</span>
+                                        <div className="flex gap-2 mb-2 text-xs text-gray-300">
+                                            <div className="flex items-center gap-1">
+                                                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                                <span>{fullMovie!.vote_average.toFixed(1)}</span>
+                                            </div>
+                                            <span>•</span>
+                                            <span>{new Date(fullMovie!.release_date).getFullYear()}</span>
                                         </div>
-                                        <span>•</span>
-                                        <span>{new Date(movie.release_date).getFullYear()}</span>
-                                    </div>
 
-                                    <div className="flex gap-2">
-                                        <Button role='button' size="sm" className="h-8 px-3 bg-white text-black hover:bg-gray-200">
-                                            <Play className="w-3 h-3 mr-1" />
-                                            Play
-                                        </Button>
-                                        <Button role='button' size="sm" variant="outline" className="h-8 w-8 p-0 border-gray-600 hover:border-white">
-                                            <Plus className="w-3 h-3" />
-                                        </Button>
+                                        <div className="flex gap-2">
+                                            <Button role='button' size="sm" className="h-8 px-3 bg-white text-black hover:bg-gray-200">
+                                                <Play className="w-3 h-3 mr-1" />
+                                                Play
+                                            </Button>
+                                            <Button role='button' size="sm" variant="outline" className="h-8 w-8 p-0 border-gray-600 hover:border-white">
+                                                <Plus className="w-3 h-3" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </Link>
+                            </>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Title and year below card */}
+            <div className="mt-2 px-1">
+                <h3 className="text-white font-semibold text-sm line-clamp-1">
+                    {movie.title}
+                </h3>
+                <p className="text-gray-400 text-xs mt-0.5">
+                    {'year' in movie ? movie.year : new Date(fullMovie!.release_date).getFullYear()}
+                </p>
+            </div>
         </div>
+    );
+
+    // Wrap with Link only if fully loaded
+    return (
+        <>
+            {isLoading ? cardContent : (
+                <Link to={`/movies/${fullMovie!.id}`} state={moviePageProp}>
+                    {cardContent}
+                </Link>
+            )}
+
+            {/* CSS for shimmer animation */}
+            <style>{`
+                @keyframes shimmer {
+                    0% {
+                        background-position: -200% 0;
+                    }
+                    100% {
+                        background-position: 200% 0;
+                    }
+                }
+                .animate-shimmer {
+                    animation: shimmer 1.5s infinite;
+                }
+            `}</style>
+        </>
     );
 };
 
