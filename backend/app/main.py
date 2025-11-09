@@ -61,6 +61,21 @@ class MovieListItem(BaseModel):
 search_cache: Dict[str, List[Dict[str, Any]]] = {}
 section_cache: Dict[str, List[Dict[str, Any]]] = {}
 
+def get_cors_headers():
+    """Get CORS headers for streaming responses"""
+    # If ALLOWED_ORIGINS is set to specific domains, use the first one
+    # In production with multiple origins, you'd want to check the request Origin header
+    if ALLOWED_ORIGINS and ALLOWED_ORIGINS[0]:
+        origin = ALLOWED_ORIGINS[0] if len(ALLOWED_ORIGINS) == 1 else "*"
+    else:
+        origin = "*"
+
+    return {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+    }
+
 def transform_tmdb_movie(movie_data: Dict[str, Any]) -> Dict[str, Any]:
     """Transform TMDB movie data to consistent format"""
 
@@ -260,14 +275,18 @@ async def stream_movie_search(query: str = Query(..., description="Search query 
             logger.error(f"Error in stream_movie_search: {e}")
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
+    # Combine standard SSE headers with CORS headers
+    headers = {
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+        "Connection": "keep-alive",
+    }
+    headers.update(get_cors_headers())
+
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-            "Connection": "keep-alive",
-        }
+        headers=headers
     )
 
 # Section query endpoint that mirrors Redux sectionQuery
@@ -353,14 +372,18 @@ async def stream_movie_section(query: str = Query(..., description="Section quer
             logger.error(f"Error in stream_movie_section: {e}")
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
+    # Combine standard SSE headers with CORS headers
+    headers = {
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+        "Connection": "keep-alive",
+    }
+    headers.update(get_cors_headers())
+
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-            "Connection": "keep-alive",
-        }
+        headers=headers
     )
 
 # Fetch individual movie results (mirrors fetchMoviesResults)
