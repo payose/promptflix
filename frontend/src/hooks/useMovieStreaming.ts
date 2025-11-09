@@ -24,13 +24,14 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
     const dispatch = useDispatch<AppDispatch>();
 
     const streamMovies = useCallback(async (query: string) => {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+        // Use the same base URL as the axios configuration
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
         const endpoint = type === 'section'
-            ? `/api/movies/section/stream`
-            : `/api/movies/search/stream`;
+            ? `/movies/section/stream`
+            : `/movies/search/stream`;
 
         const eventSource = new EventSource(
-            `${backendUrl}${endpoint}?query=${encodeURIComponent(query)}`
+            `${baseUrl}${endpoint}?query=${encodeURIComponent(query)}`
         );
 
         eventSource.onmessage = (event) => {
