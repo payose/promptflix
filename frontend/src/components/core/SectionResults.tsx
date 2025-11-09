@@ -1,10 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import MovieCard from '@/components/core/movieCard';
-import { sectionQuery } from '@/redux/movieSlice';
-import { RootState, AppDispatch } from '@/redux/store';
+import MovieCardSkeleton from '@/components/core/MovieCardSkeleton';
+import { RootState } from '@/redux/store';
+import type { Movie } from '@/types/movie';
+import { useMovieStreaming } from '@/hooks/useMovieStreaming';
 
 const sectionQueries = [
     'mind-bending sci-fi movies that make you cringe',
@@ -16,7 +18,7 @@ const sectionQueries = [
 
 interface MovieSectionProps {
     query: string;
-    movies: any[];
+    movies: (Movie | { title: string; year: number; isLoading?: boolean })[];
 }
 
 const MovieSection = ({ query, movies }: MovieSectionProps) => {
@@ -48,6 +50,10 @@ const MovieSection = ({ query, movies }: MovieSectionProps) => {
     if (!movies || movies.length === 0) {
         return null;
     }
+
+    const isFullMovie = (movie: any): movie is Movie => {
+        return 'id' in movie && movie.id !== undefined;
+    };
 
     return (
         <div className="relative group mb-12">
@@ -93,14 +99,21 @@ const MovieSection = ({ query, movies }: MovieSectionProps) => {
                             msOverflowStyle: 'none'
                         } as React.CSSProperties}
                     >
-                        {movies.map((movie: any) => (
-                            <div key={movie.id} className="flex-none w-28 md:w-52">
-                                <MovieCard
-                                    movie={movie}
-                                    isHovered={hoveredMovie === movie.id}
-                                    onHover={() => setHoveredMovie(movie.id)}
-                                    onLeave={() => setHoveredMovie(null)}
-                                />
+                        {movies.map((movie, index) => (
+                            <div key={isFullMovie(movie) ? movie.id : `${movie.title}-${index}`} className="flex-none w-28 md:w-52">
+                                {isFullMovie(movie) ? (
+                                    <MovieCard
+                                        movie={movie}
+                                        isHovered={hoveredMovie === movie.id}
+                                        onHover={() => setHoveredMovie(movie.id)}
+                                        onLeave={() => setHoveredMovie(null)}
+                                    />
+                                ) : (
+                                    <MovieCardSkeleton
+                                        title={movie.title}
+                                        year={movie.year}
+                                    />
+                                )}
                             </div>
                         ))}
                     </div>
@@ -111,24 +124,25 @@ const MovieSection = ({ query, movies }: MovieSectionProps) => {
 };
 
 export default function SectionResults() {
-    const dispatch = useDispatch<AppDispatch>();
-    const { sectionResults, sectionLoading } = useSelector((state: RootState) => state.movies);
+    const { partialSections, sectionLoading } = useSelector((state: RootState) => state.movies);
+    const { streamMovies } = useMovieStreaming({ type: 'section' });
 
     useEffect(() => {
         const fetchSectionMovies = async () => {
             for (const query of sectionQueries) {
                 // Only fetch if we don't have cached results
-                if (!sectionResults[query]) {
-                    await dispatch(sectionQuery(query));
+                if (!partialSections[query]) {
+                    await streamMovies(query);
                 }
             }
         };
+
         fetchSectionMovies();
-    }, [dispatch]);
+    }, [partialSections, streamMovies]);
 
     return (
         <div className="mt-6 min-h-screen">
-            {sectionLoading && Object.keys(sectionResults).length === 0 ? (
+            {sectionLoading && Object.keys(partialSections).length === 0 ? (
                 <div className="flex items-center justify-center py-20">
                     <div className="text-gray-400">Loading sections...</div>
                 </div>
@@ -137,7 +151,7 @@ export default function SectionResults() {
                     <MovieSection
                         key={index}
                         query={query}
-                        movies={sectionResults[query] || []}
+                        movies={partialSections[query] || []}
                     />
                 ))
             )}

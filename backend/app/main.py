@@ -1,11 +1,13 @@
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import requests
 import os
 import logging
 from typing import List, Dict, Any, Optional
 import json
+import asyncio
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -61,15 +63,14 @@ section_cache: Dict[str, List[Dict[str, Any]]] = {}
 
 def transform_tmdb_movie(movie_data: Dict[str, Any]) -> Dict[str, Any]:
     """Transform TMDB movie data to consistent format"""
-    base_image_url = "https://image.tmdb.org/t/p/w500"
-    
+
     return {
         "id": movie_data.get("id"),
         "title": movie_data.get("title"),
         "overview": movie_data.get("overview"),
         "release_date": movie_data.get("release_date"),
-        "poster_path": f"{base_image_url}{movie_data.get('poster_path')}" if movie_data.get('poster_path') else None,
-        "backdrop_path": f"{base_image_url}{movie_data.get('backdrop_path')}" if movie_data.get('backdrop_path') else None,
+        "poster_path": movie_data.get("poster_path"),
+        "backdrop_path": movie_data.get("backdrop_path"),
         "vote_average": movie_data.get("vote_average"),
         "vote_count": movie_data.get("vote_count"),
         "popularity": movie_data.get("popularity"),
@@ -77,6 +78,7 @@ def transform_tmdb_movie(movie_data: Dict[str, Any]) -> Dict[str, Any]:
         "adult": movie_data.get("adult", False),
         "original_language": movie_data.get("original_language"),
         "original_title": movie_data.get("original_title"),
+        "video": movie_data.get("video", False),
     }
 
 def make_tmdb_request(endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -179,7 +181,7 @@ def fetch_movie_details(movie_item: MovieListItem) -> Optional[Dict[str, Any]]:
 @app.get("/api/movies/search")
 def search_movies_with_ai(query: str = Query(..., description="Search query for movie recommendations")) -> Dict[str, Any]:
     """Search for movies using AI recommendations + TMDB details (mirrors queryAIforMovieList)"""
-    
+
     # Check cache first
     if query in search_cache:
         logger.info(f"Returning cached results for search query: {query}")
@@ -188,38 +190,91 @@ def search_movies_with_ai(query: str = Query(..., description="Search query for 
             "movies": search_cache[query],
             "cached": True
         }
-    
+
     try:
         # Step 1: Query OpenAI for movie recommendations
         movie_list = query_openai_for_movies(query)
         logger.info(f"OpenAI returned {len(movie_list)} movie recommendations")
-        
+
         # Step 2: Fetch detailed information for each movie from TMDB
         detailed_movies = []
         for movie_item in movie_list:
             movie_details = fetch_movie_details(movie_item)
             if movie_details:
                 detailed_movies.append(movie_details)
-        
+
         # Cache the results
         search_cache[query] = detailed_movies
-        
+
         logger.info(f"Successfully fetched details for {len(detailed_movies)} movies")
         return {
             "query": query,
             "movies": detailed_movies,
             "cached": False
         }
-        
+
     except Exception as e:
         logger.error(f"Error in search_movies_with_ai: {e}")
         raise HTTPException(status_code=500, detail="Failed to search movies")
+
+# Streaming endpoint for search (progressive loading)
+@app.get("/api/movies/search/stream")
+async def stream_movie_search(query: str = Query(..., description="Search query for movie recommendations")):
+    """Stream movie search data - first titles, then progressive TMDB details"""
+
+    async def event_generator():
+        try:
+            # Check cache first - if cached, send all at once
+            if query in search_cache:
+                logger.info(f"Returning cached results for search query: {query}")
+                yield f"data: {json.dumps({'type': 'complete', 'query': query, 'movies': search_cache[query]})}\n\n"
+                return
+
+            # Step 1: Query OpenAI for movie recommendations
+            movie_list = query_openai_for_movies(query)
+            logger.info(f"OpenAI returned {len(movie_list)} movie recommendations for search")
+
+            # Step 2: Send initial titles/years immediately
+            initial_data = [{"title": movie.title, "year": movie.year} for movie in movie_list]
+            yield f"data: {json.dumps({'type': 'initial', 'query': query, 'movies': initial_data})}\n\n"
+
+            # Step 3: Fetch and stream detailed information for each movie
+            detailed_movies = []
+            for index, movie_item in enumerate(movie_list):
+                movie_details = fetch_movie_details(movie_item)
+                if movie_details:
+                    detailed_movies.append(movie_details)
+                    # Stream each movie detail as it's fetched
+                    yield f"data: {json.dumps({'type': 'detail', 'query': query, 'index': index, 'movie': movie_details})}\n\n"
+                    # Small delay to avoid overwhelming the client
+                    await asyncio.sleep(0.05)
+
+            # Cache the complete results
+            search_cache[query] = detailed_movies
+
+            # Send completion signal
+            yield f"data: {json.dumps({'type': 'done', 'query': query, 'total': len(detailed_movies)})}\n\n"
+            logger.info(f"Successfully streamed {len(detailed_movies)} movies for search: {query}")
+
+        except Exception as e:
+            logger.error(f"Error in stream_movie_search: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        }
+    )
 
 # Section query endpoint that mirrors Redux sectionQuery
 @app.get("/api/movies/section")
 def get_movie_section_with_ai(query: str = Query(..., description="Section query for movie recommendations")) -> Dict[str, Any]:
     """Get movie section using AI recommendations + TMDB details (mirrors sectionQuery)"""
-    
+
     # Check cache first
     if query in section_cache:
         logger.info(f"Returning cached results for section query: {query}")
@@ -228,32 +283,85 @@ def get_movie_section_with_ai(query: str = Query(..., description="Section query
             "movies": section_cache[query],
             "cached": True
         }
-    
+
     try:
         # Step 1: Query OpenAI for movie recommendations
         movie_list = query_openai_for_movies(query)
         logger.info(f"OpenAI returned {len(movie_list)} movie recommendations for section")
-        
+
         # Step 2: Fetch detailed information for each movie from TMDB
         detailed_movies = []
         for movie_item in movie_list:
             movie_details = fetch_movie_details(movie_item)
             if movie_details:
                 detailed_movies.append(movie_details)
-        
+
         # Cache the results
         section_cache[query] = detailed_movies
-        
+
         logger.info(f"Successfully fetched section details for {len(detailed_movies)} movies")
         return {
             "query": query,
             "movies": detailed_movies,
             "cached": False
         }
-        
+
     except Exception as e:
         logger.error(f"Error in get_movie_section_with_ai: {e}")
         raise HTTPException(status_code=500, detail="Failed to get movie section")
+
+# Streaming endpoint for progressive loading
+@app.get("/api/movies/section/stream")
+async def stream_movie_section(query: str = Query(..., description="Section query for movie recommendations")):
+    """Stream movie section data - first titles, then progressive TMDB details"""
+
+    async def event_generator():
+        try:
+            # Check cache first - if cached, send all at once
+            if query in section_cache:
+                logger.info(f"Returning cached results for section query: {query}")
+                yield f"data: {json.dumps({'type': 'complete', 'query': query, 'movies': section_cache[query]})}\n\n"
+                return
+
+            # Step 1: Query OpenAI for movie recommendations
+            movie_list = query_openai_for_movies(query)
+            logger.info(f"OpenAI returned {len(movie_list)} movie recommendations for section")
+
+            # Step 2: Send initial titles/years immediately
+            initial_data = [{"title": movie.title, "year": movie.year} for movie in movie_list]
+            yield f"data: {json.dumps({'type': 'initial', 'query': query, 'movies': initial_data})}\n\n"
+
+            # Step 3: Fetch and stream detailed information for each movie
+            detailed_movies = []
+            for index, movie_item in enumerate(movie_list):
+                movie_details = fetch_movie_details(movie_item)
+                if movie_details:
+                    detailed_movies.append(movie_details)
+                    # Stream each movie detail as it's fetched
+                    yield f"data: {json.dumps({'type': 'detail', 'query': query, 'index': index, 'movie': movie_details})}\n\n"
+                    # Small delay to avoid overwhelming the client
+                    await asyncio.sleep(0.05)
+
+            # Cache the complete results
+            section_cache[query] = detailed_movies
+
+            # Send completion signal
+            yield f"data: {json.dumps({'type': 'done', 'query': query, 'total': len(detailed_movies)})}\n\n"
+            logger.info(f"Successfully streamed {len(detailed_movies)} movies for section: {query}")
+
+        except Exception as e:
+            logger.error(f"Error in stream_movie_section: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        }
+    )
 
 # Fetch individual movie results (mirrors fetchMoviesResults)
 @app.post("/api/movies/fetch-details")
