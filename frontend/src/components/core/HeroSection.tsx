@@ -1,25 +1,8 @@
-import { Button } from "@/components/ui/button";
 import { Sparkles, Zap, Film } from 'lucide-react';
 import SearchBox from '@/components/core/SearchBox';
 import SuggestionButtons from '@/components/core/SuggestionButtons';
-import { useNavigate } from 'react-router-dom';
-
-const promptSuggestions = [
-    'Sci-fi movies with mind-bending plots',
-    'Heartwarming family dramas',
-    'Action thrillers set in Tokyo',
-    'Classic noir films from the 40s',
-    'Movies about artificial intelligence',
-    'Feel-good comedies for a rainy day',
-];
 
 export default function HeroSection() {
-    const navigate = useNavigate();
-
-    const handlePromptClick = (query: string) => {
-        if (!query.trim()) return;
-        navigate(`/search?q=${encodeURIComponent(query)}`);
-    };
 
     return (
         <div className="relative w-full overflow-hidden">
@@ -66,30 +49,17 @@ export default function HeroSection() {
                 </div>
 
                 {/* Suggestion Buttons */}
-                <div className="mb-8">
-                    <SuggestionButtons />
-                </div>
+               
 
-                {/* Additional Prompt suggestions */}
+                {/*Prompt suggestions */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-center gap-2 mb-4">
                         <Film className="w-5 h-5 text-cyan-400" />
                         <p className="text-sm font-medium text-gray-300">Try these prompts:</p>
                     </div>
-                    
-                    <div className="flex flex-wrap justify-center gap-3 max-w-4xl mx-auto">
-                        {promptSuggestions.map((prompt, index) => (
-                            <Button
-                                key={index}
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handlePromptClick(prompt)}
-                                className="group relative overflow-hidden rounded-full border-purple-500/30 bg-gray-900/50 backdrop-blur-sm text-gray-300 hover:text-white hover:border-purple-500/50 hover:bg-gradient-to-r hover:from-purple-800 hover:to-pink-800 transition-all duration-300"
-                            >
-                                <span className="relative z-10">{prompt}</span>
-                                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-pink-500/0 to-cyan-500/0 group-hover:from-purple-500/10 group-hover:via-pink-500/10 group-hover:to-cyan-500/10 transition-all duration-300" />
-                            </Button>
-                        ))}
+
+                    <div className="mb-8">
+                        <SuggestionButtons />
                     </div>
                 </div>
 
