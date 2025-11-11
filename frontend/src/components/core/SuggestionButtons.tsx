@@ -1,17 +1,21 @@
 import { Button } from "@/components/ui/button"
 import { useNavigate } from 'react-router-dom';
 
-const suggestedQueries = [
+const promptSuggestions = [
     'small town horror movies',
     'Movies with irredeemable villains',
+    'Action thrillers set in Tokyo',
+    'Heartwarming family dramas',
     'Movies directed by Christopher Nolan',
+    'Classic noir films from the 40s',
+    'Movies about artificial intelligence',
     'Feel-good romantic comedies from the 90s',
 ]
 
 function SuggestionButtons() {
     const navigate = useNavigate();
 
-    const fetchSuggestion = (query: string) => {
+    const handlePromptClick = (query: string) => {
         if (!query.trim()) return;
         
         // Navigate to search page with query parameter
@@ -20,18 +24,18 @@ function SuggestionButtons() {
     };
 
     return (
-        <div className="pt-4 flex flex-wrap justify-center gap-2">
-            {suggestedQueries.map((query, index) => (
-                <span className="rounded-full" key={index}>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-gray-400 hover:text-gray-100 bg-transparent hover:bg-transparent transition rounded-full"
-                        onClick={() => fetchSuggestion(query)}
-                    >
-                        {query}
-                    </Button>
-                </span>
+        <div className="flex flex-wrap justify-center gap-3 max-w-4xl mx-auto">
+            {promptSuggestions.map((prompt, index) => (
+                <Button
+                    key={index}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePromptClick(prompt)}
+                    className="group relative overflow-hidden rounded-full border-purple-500/30 bg-gray-900/50 backdrop-blur-sm text-gray-300 hover:text-white hover:border-purple-500/50 hover:bg-gradient-to-r hover:from-purple-800 hover:to-pink-800 transition-all duration-300"
+                >
+                    <span className="relative z-10">{prompt}</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-pink-500/0 to-cyan-500/0 group-hover:from-purple-500/10 group-hover:via-pink-500/10 group-hover:to-cyan-500/10 transition-all duration-300" />
+                </Button>
             ))}
         </div>
     )

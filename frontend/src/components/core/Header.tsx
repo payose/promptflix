@@ -17,29 +17,24 @@ export default function Header() {
   return (
     <header
         className={`
-            fixed top-0 w-full z-50 border-b-[0.5px] border-cyan-900 transition-all
-            ${scrolled ? 'bg-gray-900' : 'bg-gray-900/10'} 
+            fixed top-0 w-full z-50 border-b border-purple-500/20 transition-all backdrop-blur-md
+            ${scrolled ? 'bg-gray-900/95' : 'bg-gray-900/60'} 
         `}
     >
-      <div className="flex gap-6 items-center justify-between py-5 mx-auto px-4 sm:px-6 lg:px-24">
+      <div className="flex gap-4 items-center justify-between py-4 mx-auto px-4 sm:px-6 lg:px-12">
         {/* Logo */}
-        <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-pink-600">
+        <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 whitespace-nowrap">
             PromptFlix
         </h1>
 
-        {/* Search (visible only when scrolled) */}
-        <div className="flex-1 px-20">
-            {scrolled && (
-            <div className="transition-opacity duration-500 ease-in-out">
-                <SearchBox />
-            </div>
-            )}
+        {/* Search (always visible) */}
+        <div className="flex-1 max-w-2xl mx-4">
+            <SearchBox />
         </div>
-        
 
         {/* Movie List Button */}
-        <div>
-          <Button variant="ghost" className="text-gray-300 border-none bg-cyan-600 hover:text-white">
+        <div className="whitespace-nowrap">
+          <Button variant="ghost" className="text-gray-300 border-none bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 hover:text-white">
             Movie List
           </Button>
         </div>

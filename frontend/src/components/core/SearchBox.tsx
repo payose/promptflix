@@ -56,27 +56,37 @@ export default function SearchBox() {
 
     return (
         <div className="w-full">
-            <div className="relative w-full flex items-center rounded-full border-[0.5px] border-cyan-900 focus-within:shadow-sm focus-within:shadow-purple-500/40 transition-all">
-                <input
-                    type="text"
-                    value={query}
-                    onChange={handleInputChange}
-                    placeholder="Describe your perfect movie..."
-                    className="w-full px-5 py-2.5 pr-12 rounded-full bg-gray-900 border-transparent text-gray-100 placeholder-gray-500 focus:outline-none"
-                    maxLength={200} // Prevent extremely long queries
-                />
-                <button
-                    onClick={handleAISearch}
-                    disabled={loading || !query.trim()}
-                    className="absolute right-3 hover:border-none bg-transparent transition-all disabled:opacity-50"
-                    title={query.length > 50 ? query : undefined} // Show full query on hover for long queries
-                >
-                    {loading ? (
-                        <Loader2 className="h-5 w-5 text-gray-200 animate-spin" />
-                    ) : (
-                        <SearchIcon className="h-6 w-8 text-gray-600 hover:text-gray-400" />
-                    )}
-                </button>
+            <div className="relative w-full flex items-center group">
+                {/* Gradient border effect */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/50 via-pink-500/50 to-cyan-500/50 opacity-0 group-focus-within:opacity-100 blur-sm transition-opacity duration-300" />
+                
+                <div className="relative w-full flex items-center rounded-full border border-purple-500/30 bg-gray-900/80 backdrop-blur-sm focus-within:border-purple-500/60 focus-within:shadow-lg focus-within:shadow-purple-500/20 transition-all duration-300">
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={handleInputChange}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                handleAISearch();
+                            }
+                        }}
+                        placeholder="Describe your perfect movie..."
+                        className="w-full px-6 py-3 pr-14 rounded-full bg-transparent border-transparent text-gray-100 placeholder-gray-400 focus:outline-none"
+                        maxLength={200}
+                    />
+                    <button
+                        onClick={handleAISearch}
+                        disabled={loading || !query.trim()}
+                        className="absolute right-2 p-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={query.length > 50 ? query : undefined}
+                    >
+                        {loading ? (
+                            <Loader2 className="h-5 w-5 text-white animate-spin" />
+                        ) : (
+                            <SearchIcon className="h-5 w-5 text-white" />
+                        )}
+                    </button>
+                </div>
             </div>
             
             {/* Optional: Display current search query for very long queries */}
