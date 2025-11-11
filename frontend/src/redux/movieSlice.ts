@@ -105,13 +105,37 @@ const movieSlice = createSlice({
     clearSearchCache: (state) => {
       state.searchResults = {};
     },
+    // Start streaming actions
+    startSectionStreaming: (state, action: PayloadAction<{ query: string }>) => {
+      state.sectionLoading = true;
+      state.sectionError = null;
+      // Clear any existing partial data for this query
+      delete state.partialSections[action.payload.query];
+    },
+    startSearchStreaming: (state, action: PayloadAction<{ query: string }>) => {
+      state.loading = true;
+      state.error = null;
+      // Clear any existing partial data for this query
+      delete state.partialSearches[action.payload.query];
+    },
+    // Error handling actions
+    sectionStreamError: (state, action: PayloadAction<{ query: string; error: string }>) => {
+      state.sectionLoading = false;
+      state.sectionError = action.payload.error;
+      delete state.partialSections[action.payload.query];
+    },
+    searchStreamError: (state, action: PayloadAction<{ query: string; error: string }>) => {
+      state.loading = false;
+      state.error = action.payload.error;
+      delete state.partialSearches[action.payload.query];
+    },
     // Progressive loading reducers - Sections
     setInitialMovies: (state, action: PayloadAction<{ query: string; movies: PartialMovie[] }>) => {
       state.partialSections[action.payload.query] = action.payload.movies.map(m => ({
         ...m,
         isLoading: true
       }));
-      state.sectionLoading = false;
+      // Keep loading state true while streaming continues
     },
     updateMovieDetail: (state, action: PayloadAction<{ query: string; index: number; movie: Movie }>) => {
       const { query, index, movie } = action.payload;
@@ -127,6 +151,7 @@ const movieSlice = createSlice({
           (m): m is Movie => 'id' in m && m.id !== undefined
         );
       }
+      state.sectionLoading = false;
     },
     setSectionFromCache: (state, action: PayloadAction<{ query: string; movies: Movie[] }>) => {
       state.sectionResults[action.payload.query] = action.payload.movies;
@@ -139,7 +164,7 @@ const movieSlice = createSlice({
         ...m,
         isLoading: true
       }));
-      state.loading = false;
+      // Keep loading state true while streaming continues
     },
     updateSearchMovieDetail: (state, action: PayloadAction<{ query: string; index: number; movie: Movie }>) => {
       const { query, index, movie } = action.payload;
@@ -156,6 +181,7 @@ const movieSlice = createSlice({
         );
         state.movies = state.searchResults[query];
       }
+      state.loading = false;
     },
     setSearchFromCache: (state, action: PayloadAction<{ query: string; movies: Movie[] }>) => {
       state.searchResults[action.payload.query] = action.payload.movies;
@@ -208,6 +234,10 @@ export const {
   resetMovieSection,
   clearSearchCache,
   clearSectionCache,
+  startSectionStreaming,
+  startSearchStreaming,
+  sectionStreamError,
+  searchStreamError,
   setInitialMovies,
   updateMovieDetail,
   completeSectionLoading,
