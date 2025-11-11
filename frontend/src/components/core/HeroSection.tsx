@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Sparkles, Zap, Film } from 'lucide-react';
+import SearchBox from '@/components/core/SearchBox';
+import SuggestionButtons from '@/components/core/SuggestionButtons';
 import { useNavigate } from 'react-router-dom';
 
 const promptSuggestions = [
@@ -53,12 +55,22 @@ export default function HeroSection() {
                 </h1>
 
                 {/* Description */}
-                <p className="text-lg sm:text-xl text-gray-400 text-center max-w-3xl mx-auto mb-12">
+                <p className="text-lg sm:text-xl text-gray-400 text-center max-w-3xl mx-auto mb-8">
                     Use natural language to find exactly what you're looking for. 
                     Just describe your mood, genre, or vibe, and let AI do the rest.
                 </p>
 
-                {/* Prompt suggestions */}
+                {/* Search Box */}
+                <div className="max-w-3xl mx-auto mb-8">
+                    <SearchBox />
+                </div>
+
+                {/* Suggestion Buttons */}
+                <div className="mb-8">
+                    <SuggestionButtons />
+                </div>
+
+                {/* Additional Prompt suggestions */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-center gap-2 mb-4">
                         <Film className="w-5 h-5 text-cyan-400" />
@@ -72,7 +84,7 @@ export default function HeroSection() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handlePromptClick(prompt)}
-                                className="group relative overflow-hidden rounded-full border-purple-500/30 bg-gray-900/50 backdrop-blur-sm text-gray-300 hover:text-white hover:border-purple-500/50 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/20 transition-all duration-300"
+                                className="group relative overflow-hidden rounded-full border-purple-500/30 bg-gray-900/50 backdrop-blur-sm text-gray-300 hover:text-white hover:border-purple-500/50 hover:bg-gradient-to-r hover:from-purple-800 hover:to-pink-800 transition-all duration-300"
                             >
                                 <span className="relative z-10">{prompt}</span>
                                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-pink-500/0 to-cyan-500/0 group-hover:from-purple-500/10 group-hover:via-pink-500/10 group-hover:to-cyan-500/10 transition-all duration-300" />
