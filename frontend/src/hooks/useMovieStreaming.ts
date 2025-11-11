@@ -2,6 +2,10 @@ import { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/redux/store';
 import {
+    startSectionStreaming,
+    startSearchStreaming,
+    sectionStreamError,
+    searchStreamError,
     setInitialMovies,
     updateMovieDetail,
     completeSectionLoading,
@@ -24,6 +28,13 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
     const dispatch = useDispatch<AppDispatch>();
 
     const streamMovies = useCallback(async (query: string) => {
+        // Set loading state to true before starting the stream
+        if (type === 'section') {
+            dispatch(startSectionStreaming({ query }));
+        } else {
+            dispatch(startSearchStreaming({ query }));
+        }
+
         // Use the same base URL as the axios configuration
         const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
         const endpoint = type === 'section'
@@ -101,21 +112,38 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
 
                     case 'error':
                         console.error('Streaming error:', data.message);
+                        if (type === 'section') {
+                            dispatch(sectionStreamError({ query: data.query, error: data.message }));
+                        } else {
+                            dispatch(searchStreamError({ query: data.query, error: data.message }));
+                        }
                         eventSource.close();
                         onError?.(data.message);
                         break;
                 }
             } catch (error) {
                 console.error('Error parsing SSE data:', error);
+                const errorMessage = String(error);
+                if (type === 'section') {
+                    dispatch(sectionStreamError({ query, error: errorMessage }));
+                } else {
+                    dispatch(searchStreamError({ query, error: errorMessage }));
+                }
                 eventSource.close();
-                onError?.(String(error));
+                onError?.(errorMessage);
             }
         };
 
         eventSource.onerror = (error) => {
             console.error('EventSource error:', error);
+            const errorMessage = 'Connection error';
+            if (type === 'section') {
+                dispatch(sectionStreamError({ query, error: errorMessage }));
+            } else {
+                dispatch(searchStreamError({ query, error: errorMessage }));
+            }
             eventSource.close();
-            onError?.('Connection error');
+            onError?.(errorMessage);
         };
 
         return eventSource;
