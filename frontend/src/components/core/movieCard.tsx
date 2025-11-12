@@ -78,11 +78,11 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeav
                                         </div>
 
                                         <div className="flex gap-2">
-                                            <Button role='button' size="sm" className="h-8 px-3 bg-white text-black hover:bg-gray-200">
+                                            <Button role='button' size="sm" className="h-8 px-3 bg-amber-400 text-black hover:bg-amber-400 hover:border-amber-500">
                                                 <Play className="w-3 h-3 mr-1" />
                                                 Play
                                             </Button>
-                                            <Button role='button' size="sm" variant="outline" className="h-8 w-8 p-0 border-gray-600 hover:border-white">
+                                            <Button role='button' size="sm" className="h-8 w-8 p-0 bg-amber-400 text-black hover:bg-amber-400 hover:border-amber-500">
                                                 <Plus className="w-3 h-3" />
                                             </Button>
                                         </div>

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, PlayCircle, Star, Clock, Film, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PlayCircle, Star, Clock, Film, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Movie, Review } from '@/types/movie';
 import { useLocation } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
 import ReviewCard from "@/components/core/reviews"
+import Header from '@/components/core/Header';
+import PreviousPage from '@/components/ui/previousPage';
 import APIService from "@/api/axios"
 import SEO from '@/components/SEO/SEO';
 
@@ -47,7 +48,6 @@ interface WatchProvidersResponse {
 }
 
 const MoviePage: React.FC = () => {
-    const navigate = useNavigate();
     const { state } = useLocation();
     const movie = state.movie;
 
@@ -58,11 +58,6 @@ const MoviePage: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoadingReviews, setIsLoadingReviews] = useState(false);
     const [watchProviders, setWatchProviders] = useState<WatchProvidersResponse | null>(null);
-
-    const goBack = () => {
-        navigate(-1);
-        // navigate('/specific-route')
-    };
 
     const getYoutubeTrailer = async (movieTitle: string) => {
         try {
@@ -150,164 +145,164 @@ const MoviePage: React.FC = () => {
                         keywords={`${details.title}, ${details.genres?.map(g => g.name).join(', ')}, watch movie, movie details`}
                         {...(movieStructuredData && { structuredData: movieStructuredData })}
                     />
-                    <div className="container mx-auto p-6">
-                    {/* Header with Back Button */}
-                    <button
-                        onClick={goBack}
-                        className="flex items-center gap-2 text-gray-300 bg-gray-800/50 hover:text-white mb-6"
-                    >
-                        <ArrowLeft /> Back to Search
-                    </button>
+                    <Header />
+                    
+                    <div className="mt-20 container mx-auto p-6">
+                  
+                        <PreviousPage />
 
-                    {/* Movie Hero Section */}
-                    <div className="grid md:grid-cols-[400px_1fr] gap-8">
-                        {/* Poster */}
-                        <div>
-                            <img
-                                src={imageError ? `https://images.pexels.com/photos/29890776/pexels-photo-29890776/free-photo-of-traditional-vietnamese-new-year-gift-box.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2`
-                                    : `http://image.tmdb.org/t/p/w500/${details.backdrop_path}`}
-                                className='rounded-md'
-                                alt={`poster of ${details.title}`}
-                                onError={() => setImageError(true)}
-                            />
-                        </div>
-
-                        {/* Movie Details */}
-                        <div className="text-gray-100">
-                            <h1 className="text-lg 2xl:text-2xl font-bold mb-4">{details.title}</h1>
-
-                            {/* Quick Stats */}
-                            <div className="flex flex-wrap items-center text-sm xl:text-base gap-4 mb-4">
-                                <div className="flex items-center gap-2">
-                                    <Star className="text-yellow-500" />
-                                    <span>{details.vote_average}/10</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Clock className="text-red-400" />
-                                    <span>{details.runtime} mins</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Film className="text-green-400" />
-                                    {details.genres?.map(genre => (
-                                        <span key={genre.id}>{genre.name}</span>
-                                    )) || <span>No genres available</span>}
-                                </div>
-                            </div>
-
-                            {/* Overview */}
-                            <p className="text-sm xl:text-base text-gray-300 mb-6">{details.overview}</p>
-
-                            {/* Trailer Button */}
-                            <button
-                                onClick={() => getYoutubeTrailer(details.title)}
-                                className="bg-cyan-600 hover:bg-cyan-700 text-sm text-white px-6 py-3 rounded-lg flex items-center gap-2"
-                            >
-                                <PlayCircle /> Watch Trailer
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Streaming Providers Section */}
-                    {watchProviders && watchProviders.results.US && (
-                        <div className="mt-12 m-auto">
-                            <h2 className="text-sm xl:text-base text-gray-200 mb-6">
-                                Where to Stream
-                            </h2>
-
-                            <div className="space-y-6">
-                                {/* Streaming Services */}
-                                {watchProviders.results.US.flatrate && watchProviders.results.US.flatrate.length > 0 && (
-                                    <div className="flex flex-wrap gap-4">
-                                        {watchProviders.results.US.flatrate.map(provider => (
-                                            <div key={provider.provider_id} className="flex flex-col items-center gap-2">
-                                                <img
-                                                    src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
-                                                    alt={provider.provider_name}
-                                                    className="w-16 h-16 rounded-lg"
-                                                />
-                                                <span className="text-xs text-gray-400 text-center max-w-[80px]">
-                                                    {provider.provider_name}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* JustWatch Attribution */}
-                            <p className="text-xs text-gray-500 mt-4">
-                                Streaming data provided by <a href="https://www.justwatch.com/" target="_blank" rel="noopener noreferrer" className="text-cyan-500 hover:underline">JustWatch</a>
-                            </p>
-                        </div>
-                    )}
-
-                    {/* Reviews Section */}
-                    <div className="mt-16 grid md:grid-cols-[1fr_400px]">
-                        <div>
-                            <h2 className="text-lg xl:text-2xl text-gray-200 mb-6">
-                                Reviews {reviews && `(${reviews.total_results})`}
-                            </h2>
-
-                            {isLoadingReviews ? (
-                                <div className="text-center text-gray-400 py-8">Loading reviews...</div>
-                            ) : reviews?.results.length === 0 ? (
-                                <div className="text-center text-gray-400 py-8">No reviews yet</div>
-                            ) : (
-                                <>
-                                    <div className="space-y-6">
-                                        {reviews?.results.map(review => (
-                                            <ReviewCard key={review.id} review={review} />
-                                        ))}
-                                    </div>
-
-                                    {/* Pagination */}
-                                    {reviews && reviews.total_pages > 1 && (
-                                        <div className="flex justify-center items-center gap-4 mt-8">
-                                            <button
-                                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                                disabled={currentPage === 1}
-                                                className="p-2 rounded-lg bg-gray-800 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                <ChevronLeft className="w-5 h-5" />
-                                            </button>
-                                            <span className="text-gray-300">
-                                                Page {currentPage} of {reviews.total_pages}
-                                            </span>
-                                            <button
-                                                onClick={() => setCurrentPage(p => Math.min(reviews.total_pages, p + 1))}
-                                                disabled={currentPage === reviews.total_pages}
-                                                className="p-2 rounded-lg bg-gray-800 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                <ChevronRight className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Trailer Modal */}
-                    {activeTrailer && (
-                        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-                            <div className="max-w-4xl w-full">
-                                <button
-                                    onClick={() => setActiveTrailer(null)}
-                                    className="absolute top-4 right-4 text-white text-2xl"
-                                >
-                                    ✕
-                                </button>
-                                <iframe
-                                    src={`https://www.youtube.com/embed/${activeTrailer}`}
-                                    className="w-full aspect-video"
-                                    title="Movie Trailer"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    allowFullScreen
+                        {/* Movie Hero Section */}
+                        <div className="grid md:grid-cols-[400px_1fr] gap-8">
+                            {/* Poster */}
+                            <div>
+                                <img
+                                    src={imageError ? `https://images.pexels.com/photos/29890776/pexels-photo-29890776/free-photo-of-traditional-vietnamese-new-year-gift-box.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2`
+                                        : `http://image.tmdb.org/t/p/w500/${details.backdrop_path}`}
+                                    className='rounded-md'
+                                    alt={`poster of ${details.title}`}
+                                    onError={() => setImageError(true)}
                                 />
                             </div>
+
+                            {/* Movie Details */}
+                            <div className="text-gray-100">
+                                <h1 className="text-lg 2xl:text-2xl font-bold mb-4">{details.title}</h1>
+
+                                {/* Quick Stats */}
+                                <div className="flex flex-wrap items-center text-sm xl:text-base gap-4 mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <Star className="text-yellow-500" />
+                                        <span>{details.vote_average}/10</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="text-red-500" />
+                                        <span>{details.runtime} mins</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Film className="text-cyan-500" />
+                                        {details.genres?.map(genre => (
+                                            <span key={genre.id}>{genre.name}</span>
+                                        )) || <span>No genres available</span>}
+                                    </div>
+                                </div>
+
+                                {/* Overview */}
+                                <p className="text-sm xl:text-base text-gray-300 mb-6">{details.overview}</p>
+
+                                {/* Trailer Button */}
+                                <button
+                                    onClick={() => getYoutubeTrailer(details.title)}
+                                    className="bg-amber-600 hover:bg-cyan-700 text-sm text-white px-6 py-3 rounded-lg flex items-center gap-2"
+                                >
+                                    <PlayCircle /> Watch Trailer
+                                </button>
+                            </div>
                         </div>
-                    )}
-                </div>
+
+                        {/* Streaming Providers Section */}
+                        {watchProviders && watchProviders.results.US && (
+                            <div className="mt-12 m-auto">
+                                <h2 className="text-sm xl:text-base text-gray-200 mb-6">
+                                    Where to Stream
+                                </h2>
+
+                                <div className="space-y-6">
+                                    {/* Streaming Services */}
+                                    {watchProviders.results.US.flatrate && watchProviders.results.US.flatrate.length > 0 ? (
+                                        <div className="flex flex-wrap gap-4">
+                                            {watchProviders.results.US.flatrate.map(provider => (
+                                                <div key={provider.provider_id} className="flex flex-col items-center gap-2">
+                                                    <img
+                                                        src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
+                                                        alt={provider.provider_name}
+                                                        className="w-16 h-16 rounded-lg"
+                                                    />
+                                                    <span className="text-xs text-gray-400 text-center max-w-[80px]">
+                                                        {provider.provider_name}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) :  (<h2 className="text-s xl:text-sm text-gray-200 mb-6">
+                                            No streaming providers available for this movie in your country (°__°)
+                                        </h2>)
+                                    }
+                                </div>
+
+                                {/* JustWatch Attribution */}
+                                <p className="text-xs text-gray-500 mt-4">
+                                    Streaming data provided by <a href="https://www.justwatch.com/" target="_blank" rel="noopener noreferrer" className="text-cyan-500 hover:underline">JustWatch</a>
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Reviews Section */}
+                        <div className="mt-16 grid md:grid-cols-[1fr_400px]">
+                            <div>
+                                <h2 className="text-lg xl:text-2xl text-gray-200 mb-6">
+                                    Reviews {reviews && `(${reviews.total_results})`}
+                                </h2>
+
+                                {isLoadingReviews ? (
+                                    <div className="text-center text-gray-400 py-8">Loading reviews...</div>
+                                ) : reviews?.results.length === 0 ? (
+                                    <div className="text-center text-gray-400 py-8">No reviews yet</div>
+                                ) : (
+                                    <>
+                                        <div className="space-y-6">
+                                            {reviews?.results.map(review => (
+                                                <ReviewCard key={review.id} review={review} />
+                                            ))}
+                                        </div>
+
+                                        {/* Pagination */}
+                                        {reviews && reviews.total_pages > 1 && (
+                                            <div className="flex justify-center items-center gap-4 mt-8">
+                                                <button
+                                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                                    disabled={currentPage === 1}
+                                                    className="p-2 rounded-lg bg-gray-800 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <ChevronLeft className="w-5 h-5" />
+                                                </button>
+                                                <span className="text-gray-300">
+                                                    Page {currentPage} of {reviews.total_pages}
+                                                </span>
+                                                <button
+                                                    onClick={() => setCurrentPage(p => Math.min(reviews.total_pages, p + 1))}
+                                                    disabled={currentPage === reviews.total_pages}
+                                                    className="p-2 rounded-lg bg-gray-800 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <ChevronRight className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Trailer Modal */}
+                        {activeTrailer && (
+                            <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                                <div className="max-w-4xl w-full">
+                                    <button
+                                        onClick={() => setActiveTrailer(null)}
+                                        className="absolute top-4 right-4 text-white text-2xl"
+                                    >
+                                        ✕
+                                    </button>
+                                    <iframe
+                                        src={`https://www.youtube.com/embed/${activeTrailer}`}
+                                        className="w-full aspect-video"
+                                        title="Movie Trailer"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </>
             )}
         </div>

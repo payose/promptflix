@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 const promptSuggestions = [
     'small town horror movies',
     'Movies with irredeemable villains',
-    'Action thrillers set in Tokyo',
+    'Action thrillers with inconceivable plot twists',
     'Heartwarming family dramas',
     'Movies directed by Christopher Nolan',
     'Classic noir films from the 40s',

@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import SearchBox from '@/components/core/SearchBox';
 
-export default function Header() {
+interface HeaderProps {
+  hideSearchBox?: boolean;
+}
+
+export default function Header({ hideSearchBox = false }: HeaderProps) {
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
@@ -30,8 +34,8 @@ export default function Header() {
             PromptFlix
         </h1>
 
-        {/* Search (always visible) */}
-        <div className="flex-1 max-w-2xl mx-2 sm:mx-4">
+        {/* Search (conditionally visible) */}
+        <div className={`flex-1 max-w-2xl mx-2 sm:mx-4 transition-all duration-300 ${hideSearchBox ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <SearchBox />
         </div>
 
