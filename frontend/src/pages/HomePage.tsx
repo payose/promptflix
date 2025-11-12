@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import Header from '@/components/core/Header';
 import HeroSection from '@/components/core/HeroSection';
 import SEO from '@/components/SEO/SEO';
@@ -5,6 +6,33 @@ import SEO from '@/components/SEO/SEO';
 import SectionResults from '@/components/core/SectionResults';
 
 const HomePage = () => {
+    const [isHeroVisible, setIsHeroVisible] = useState(true);
+    const heroRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                // When HeroSection is visible, hide header search box
+                setIsHeroVisible(entry.isIntersecting);
+            },
+            {
+                threshold: 0.1, // Trigger when at least 10% of hero is visible
+                rootMargin: '-80px 0px 0px 0px' // Account for header height
+            }
+        );
+
+        const currentHeroRef = heroRef.current;
+
+        if (currentHeroRef) {
+            observer.observe(currentHeroRef);
+        }
+
+        return () => {
+            if (currentHeroRef) {
+                observer.unobserve(currentHeroRef);
+            }
+        };
+    }, []);
 
     // Structured data for website
     const structuredData = {
@@ -32,10 +60,10 @@ const HomePage = () => {
                 structuredData={structuredData}
             />
             <div className="min-h-screen w-screen">
-                <Header />
-                
+                <Header hideSearchBox={isHeroVisible} />
+
                 {/* Hero Section */}
-                <div className="mt-20">
+                <div ref={heroRef} className="mt-20">
                     <HeroSection />
                 </div>
 

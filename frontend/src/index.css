@@ -4,10 +4,13 @@
 
 
 :root {
-    --tw-purple: #6C79F1;
-    --tw-gradient-to: rgb(108 121 241 / 0);
-    --tw-gradient-stops: #4c4feb, #F30B92;
-    --tw-pink: #F30B92;
+    /* Core brand colors - Pink, Purple, Amber */
+    --tw-purple: #8b5cf6;
+    --tw-pink: #ec4899;
+    --tw-amber: #f59e0b;
+    
+    /* Primary gradient */
+    --tw-gradient-brand: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #f59e0b 100%);
 }
 
 /* ... */
