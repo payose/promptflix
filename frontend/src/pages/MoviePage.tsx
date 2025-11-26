@@ -59,18 +59,37 @@ const MoviePage: React.FC = () => {
     const [isLoadingReviews, setIsLoadingReviews] = useState(false);
     const [watchProviders, setWatchProviders] = useState<WatchProvidersResponse | null>(null);
 
-    const getYoutubeTrailer = async (movieTitle: string) => {
+    const getYoutubeTrailer = async (title: string, mediaType?: string, releaseYear?: string) => {
         try {
-            const response = await APIService.getInstance('youtube').get(`/search?channelType=any&maxResults=1&q=${movieTitle}%trailer`);
-            setActiveTrailer(response.data.items[0].id.videoId)
+            // Build more specific search query based on media type
+            let searchQuery = title;
+
+            // Add year to make search more specific
+            if (releaseYear) {
+                searchQuery += ` ${releaseYear}`;
+            }
+
+            // Add media type for better results
+            if (mediaType === 'tv') {
+                searchQuery += ' official trailer';
+            } else {
+                searchQuery += ' trailer';
+            }
+
+            const response = await APIService.getInstance('youtube').get(`/search?channelType=any&maxResults=1&q=${encodeURIComponent(searchQuery)}`);
+            if (response.data.items && response.data.items[0]) {
+                setActiveTrailer(response.data.items[0].id.videoId);
+            }
         } catch (error) {
+            console.error('Failed to fetch YouTube trailer', error);
             throw error;
         }
     }
 
-    const fetchMovieDetails = useCallback(async (id: string | number) => {
+    const fetchMovieDetails = useCallback(async (id: string | number, mediaType?: string) => {
         try {
-            const response = await APIService.getInstance('backend').get(`/movies/${id}`);
+            const params = mediaType ? { media_type: mediaType } : {};
+            const response = await APIService.getInstance('backend').get(`/movies/${id}`, { params });
 
             const details: MovieDetails = response.data;
 
@@ -83,7 +102,8 @@ const MoviePage: React.FC = () => {
     const fetchReviews = useCallback(async () => {
         setIsLoadingReviews(true);
         try {
-            const response = await APIService.getInstance('backend').get(`/movies/${movie.id}/reviews`);
+            const params = movie.media_type ? { media_type: movie.media_type } : {};
+            const response = await APIService.getInstance('backend').get(`/movies/${movie.id}/reviews`, { params });
             setReviews(response.data);
 
         } catch (error) {
@@ -94,25 +114,26 @@ const MoviePage: React.FC = () => {
 
             setIsLoadingReviews(false);
         }
-    }, [movie.id]);
+    }, [movie.id, movie.media_type]);
 
     const fetchWatchProviders = useCallback(async () => {
         try {
-            const response = await APIService.getInstance('backend').get(`/movies/${movie.id}/watch/providers`);
+            const params = movie.media_type ? { media_type: movie.media_type } : {};
+            const response = await APIService.getInstance('backend').get(`/movies/${movie.id}/watch/providers`, { params });
             setWatchProviders(response.data);
         } catch (error) {
             console.error('Failed to fetch watch providers', error);
         }
-    }, [movie.id]);
+    }, [movie.id, movie.media_type]);
 
     useEffect(() => {
-        fetchMovieDetails(movie.id);
+        fetchMovieDetails(movie.id, movie.media_type);
         fetchWatchProviders();
-    }, [movie]);
+    }, [movie, fetchMovieDetails, fetchWatchProviders]);
 
     useEffect(() => {
         fetchReviews();
-    }, [movie, currentPage]);
+    }, [fetchReviews, currentPage]);
 
     // Generate structured data for the movie
     const movieStructuredData = details ? {
@@ -191,7 +212,11 @@ const MoviePage: React.FC = () => {
 
                                 {/* Trailer Button */}
                                 <button
-                                    onClick={() => getYoutubeTrailer(details.title)}
+                                    onClick={() => getYoutubeTrailer(
+                                        details.title,
+                                        movie.media_type,
+                                        details.release_date ? new Date(details.release_date).getFullYear().toString() : undefined
+                                    )}
                                     className="bg-amber-600 hover:bg-cyan-700 text-sm text-white px-6 py-3 rounded-lg flex items-center gap-2"
                                 >
                                     <PlayCircle /> Watch Trailer

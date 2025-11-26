@@ -1,5 +1,5 @@
 export interface Movie {
-    id: number | string; 
+    id: number | string;
     title: string;
     release_date: string;
     overview: string;
@@ -10,6 +10,7 @@ export interface Movie {
     vote_average: number;
     vote_count?: number;
     original_language?: string;
+    media_type?: string; // 'movie' or 'tv'
 }
 
 export interface ReviewAuthorDetails {

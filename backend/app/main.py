@@ -101,6 +101,28 @@ def transform_tmdb_movie(movie_data: Dict[str, Any]) -> Dict[str, Any]:
         "original_language": movie_data.get("original_language"),
         "original_title": movie_data.get("original_title"),
         "video": movie_data.get("video", False),
+        "media_type": "movie",
+    }
+
+def transform_tmdb_tv(tv_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Transform TMDB TV show data to consistent format (matching movie structure)"""
+
+    return {
+        "id": tv_data.get("id"),
+        "title": tv_data.get("name"),  # TV shows use 'name' instead of 'title'
+        "overview": tv_data.get("overview"),
+        "release_date": tv_data.get("first_air_date"),  # TV shows use 'first_air_date'
+        "poster_path": tv_data.get("poster_path"),
+        "backdrop_path": tv_data.get("backdrop_path"),
+        "vote_average": tv_data.get("vote_average"),
+        "vote_count": tv_data.get("vote_count"),
+        "popularity": tv_data.get("popularity"),
+        "genre_ids": tv_data.get("genre_ids", []),
+        "adult": False,  # TV shows don't have adult flag
+        "original_language": tv_data.get("original_language"),
+        "original_title": tv_data.get("original_name"),  # TV shows use 'original_name'
+        "video": False,  # Not applicable to TV shows
+        "media_type": "tv",
     }
 
 def make_tmdb_request(endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -121,11 +143,28 @@ def make_tmdb_request(endpoint: str, params: Dict[str, Any] = None) -> Dict[str,
         logger.error(f"TMDB request failed: {e}")
         raise HTTPException(status_code=500, detail=f"TMDB request failed: {str(e)}")
 
-def query_openai_for_movies(prompt: str) -> List[MovieListItem]:
-    """Query OpenAI for movie recommendations"""
+def query_openai_for_movies(prompt: str, content_filter: Optional[str] = None) -> List[MovieListItem]:
+    """Query OpenAI for movie/TV recommendations based on content filter"""
     if not OPENAI_API_KEY:
         raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-    
+
+    # Build system prompt based on filter
+    if content_filter == "tv-shows":
+        content_type = "TV shows"
+        content_description = "TV shows (series, limited series, miniseries)"
+    elif content_filter == "anime":
+        content_type = "anime"
+        content_description = "anime (Japanese animated shows or movies)"
+    elif content_filter == "k-drama":
+        content_type = "K-dramas"
+        content_description = "Korean dramas (K-dramas)"
+    elif content_filter == "movies":
+        content_type = "movies"
+        content_description = "movies only (no TV shows)"
+    else:  # "all" or None
+        content_type = "movies or TV shows"
+        content_description = "movies or TV shows"
+
     try:
         headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
         body = {
@@ -134,13 +173,15 @@ def query_openai_for_movies(prompt: str) -> List[MovieListItem]:
                 {
                     "role": "system",
                     "content": (
-                        "You are a knowledgeable assistant with expertise in movies and TV shows. "
-                        "Your task is to recommend 10 movies based on the user's prompt. "
-                        "Each recommendation should be an object containing the movie title and the year of release. "
-                        "If there are multiple movies that match the user's criteria, prioritize those that are more recently released with higher ratings. "
-                        "Return the results as a JSON array of 10 objects, strictly adhering to this format: "
-                        "[{\"title\": \"Movie Title\", \"year\": 2023}, ...]. "
-                        "Do not include additional commentary or formatting."
+                        f"You are a knowledgeable assistant with expertise in movies and TV shows. "
+                        f"Your task is to recommend 10 {content_description} based on the user's prompt. "
+                        f"IMPORTANT: Only recommend {content_description}. Do not mix content types. "
+                        f"Each recommendation should be an object containing the title and the year of release. "
+                        f"For TV shows, use the first air year. "
+                        f"If there are multiple options that match the user's criteria, prioritize those that are more recently released with higher ratings. "
+                        f"Return the results as a JSON array of 10 objects, strictly adhering to this format: "
+                        f"[{{\"title\": \"Title Here\", \"year\": 2023}}, ...]. "
+                        f"Do not include additional commentary or formatting."
                     ),
                 },
                 {"role": "user", "content": prompt},
@@ -183,52 +224,71 @@ def query_openai_for_movies(prompt: str) -> List[MovieListItem]:
         logger.error(f"OpenAI request failed: {e}")
         raise HTTPException(status_code=500, detail=f"OpenAI request failed: {str(e)}")
 
-def fetch_movie_details(movie_item: MovieListItem) -> Optional[Dict[str, Any]]:
-    """Fetch detailed movie information from TMDB"""
+def fetch_movie_details(movie_item: MovieListItem, content_filter: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Fetch detailed movie/TV information from TMDB based on content filter"""
     try:
-        params = {"query": movie_item.title, "year": movie_item.year}
-        data = make_tmdb_request("/search/movie", params)
-        
-        if data.get("results") and len(data["results"]) > 0:
-            return transform_tmdb_movie(data["results"][0])
+        # Determine search endpoint based on filter
+        if content_filter in ["tv-shows", "anime", "k-drama"]:
+            # Search for TV shows
+            params = {"query": movie_item.title, "first_air_date_year": movie_item.year}
+            data = make_tmdb_request("/search/tv", params)
+
+            if data.get("results") and len(data["results"]) > 0:
+                return transform_tmdb_tv(data["results"][0])
+            else:
+                logger.warning(f"No TMDB TV results found for {movie_item.title} ({movie_item.year})")
+                return None
         else:
-            logger.warning(f"No TMDB results found for {movie_item.title} ({movie_item.year})")
-            return None
-            
+            # Search for movies (default for 'movies', 'all', or None)
+            params = {"query": movie_item.title, "year": movie_item.year}
+            data = make_tmdb_request("/search/movie", params)
+
+            if data.get("results") and len(data["results"]) > 0:
+                return transform_tmdb_movie(data["results"][0])
+            else:
+                logger.warning(f"No TMDB movie results found for {movie_item.title} ({movie_item.year})")
+                return None
+
     except Exception as e:
-        logger.error(f"Error fetching movie details for {movie_item.title}: {e}")
+        logger.error(f"Error fetching details for {movie_item.title}: {e}")
         return None
 
 # Main search endpoint that mirrors Redux queryAIforMovieList
 @app.get("/api/movies/search")
-def search_movies_with_ai(query: str = Query(..., description="Search query for movie recommendations")) -> Dict[str, Any]:
-    """Search for movies using AI recommendations + TMDB details (mirrors queryAIforMovieList)"""
+def search_movies_with_ai(
+    query: str = Query(..., description="Search query for movie recommendations"),
+    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama")
+) -> Dict[str, Any]:
+    """Search for movies/TV shows using AI recommendations + TMDB details (mirrors queryAIforMovieList)"""
+
+    # Create cache key that includes filter
+    cache_key = f"{query}_{filter or 'all'}"
 
     # Check cache first
-    if query in search_cache:
-        logger.info(f"Returning cached results for search query: {query}")
+    if cache_key in search_cache:
+        logger.info(f"Returning cached results for search query: {query} (filter: {filter})")
         return {
             "query": query,
-            "movies": search_cache[query],
+            "movies": search_cache[cache_key],
             "cached": True
         }
 
     try:
-        # Step 1: Query OpenAI for movie recommendations
-        movie_list = query_openai_for_movies(query)
-        logger.info(f"OpenAI returned {len(movie_list)} movie recommendations")
+        # Step 1: Query OpenAI for movie/TV recommendations with filter
+        movie_list = query_openai_for_movies(query, filter)
+        logger.info(f"OpenAI returned {len(movie_list)} recommendations (filter: {filter})")
 
-        # Step 2: Fetch detailed information for each movie from TMDB
+        # Step 2: Fetch detailed information for each item from TMDB
         detailed_movies = []
         for movie_item in movie_list:
-            movie_details = fetch_movie_details(movie_item)
+            movie_details = fetch_movie_details(movie_item, filter)
             if movie_details:
                 detailed_movies.append(movie_details)
 
-        # Cache the results
-        search_cache[query] = detailed_movies
+        # Cache the results with filter-specific key
+        search_cache[cache_key] = detailed_movies
 
-        logger.info(f"Successfully fetched details for {len(detailed_movies)} movies")
+        logger.info(f"Successfully fetched details for {len(detailed_movies)} items")
         return {
             "query": query,
             "movies": detailed_movies,
@@ -241,42 +301,48 @@ def search_movies_with_ai(query: str = Query(..., description="Search query for 
 
 # Streaming endpoint for search (progressive loading)
 @app.get("/api/movies/search/stream")
-async def stream_movie_search(query: str = Query(..., description="Search query for movie recommendations")):
+async def stream_movie_search(
+    query: str = Query(..., description="Search query for movie recommendations"),
+    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama")
+):
     """Stream movie search data - first titles, then progressive TMDB details"""
 
     async def event_generator():
         try:
+            # Create cache key that includes filter
+            cache_key = f"{query}_{filter or 'all'}"
+
             # Check cache first - if cached, send all at once
-            if query in search_cache:
-                logger.info(f"Returning cached results for search query: {query}")
-                yield f"data: {json.dumps({'type': 'complete', 'query': query, 'movies': search_cache[query]})}\n\n"
+            if cache_key in search_cache:
+                logger.info(f"Returning cached results for search query: {query} (filter: {filter})")
+                yield f"data: {json.dumps({'type': 'complete', 'query': query, 'movies': search_cache[cache_key]})}\n\n"
                 return
 
-            # Step 1: Query OpenAI for movie recommendations
-            movie_list = query_openai_for_movies(query)
-            logger.info(f"OpenAI returned {len(movie_list)} movie recommendations for search")
+            # Step 1: Query OpenAI for movie/TV recommendations with filter
+            movie_list = query_openai_for_movies(query, filter)
+            logger.info(f"OpenAI returned {len(movie_list)} recommendations for search (filter: {filter})")
 
             # Step 2: Send initial titles/years immediately
             initial_data = [{"title": movie.title, "year": movie.year} for movie in movie_list]
             yield f"data: {json.dumps({'type': 'initial', 'query': query, 'movies': initial_data})}\n\n"
 
-            # Step 3: Fetch and stream detailed information for each movie
+            # Step 3: Fetch and stream detailed information for each item
             detailed_movies = []
             for index, movie_item in enumerate(movie_list):
-                movie_details = fetch_movie_details(movie_item)
+                movie_details = fetch_movie_details(movie_item, filter)
                 if movie_details:
                     detailed_movies.append(movie_details)
-                    # Stream each movie detail as it's fetched
+                    # Stream each detail as it's fetched
                     yield f"data: {json.dumps({'type': 'detail', 'query': query, 'index': index, 'movie': movie_details})}\n\n"
                     # Small delay to avoid overwhelming the client
                     await asyncio.sleep(0.05)
 
-            # Cache the complete results
-            search_cache[query] = detailed_movies
+            # Cache the complete results with filter-specific key
+            search_cache[cache_key] = detailed_movies
 
             # Send completion signal
             yield f"data: {json.dumps({'type': 'done', 'query': query, 'total': len(detailed_movies)})}\n\n"
-            logger.info(f"Successfully streamed {len(detailed_movies)} movies for search: {query}")
+            logger.info(f"Successfully streamed {len(detailed_movies)} items for search: {query} (filter: {filter})")
 
         except Exception as e:
             logger.error(f"Error in stream_movie_search: {e}")
@@ -433,13 +499,18 @@ def clear_all_cache():
     section_cache = {}
     return {"message": "All caches cleared"}
 
-# Individual movie details endpoint
-@app.get("/api/movies/{movie_id}")
-def get_movie_details(movie_id: int) -> Dict[str, Any]:
-    """Get detailed information for a specific movie"""
+# Individual movie/TV details endpoint
+@app.get("/api/movies/{content_id}")
+def get_content_details(
+    content_id: int,
+    media_type: Optional[str] = Query(None, description="Media type: movie or tv")
+) -> Dict[str, Any]:
+    """Get detailed information for a specific movie or TV show"""
     try:
-        data = make_tmdb_request(f"/movie/{movie_id}")
-        # Return raw TMDB data for movie details (includes genres, runtime, etc.)
+        # Determine endpoint based on media_type
+        endpoint = f"/tv/{content_id}" if media_type == "tv" else f"/movie/{content_id}"
+
+        data = make_tmdb_request(endpoint)
         base_image_url = "https://image.tmdb.org/t/p/w500"
 
         # Transform poster and backdrop paths to full URLs
@@ -448,31 +519,48 @@ def get_movie_details(movie_id: int) -> Dict[str, Any]:
         if data.get('backdrop_path'):
             data['backdrop_path'] = f"{base_image_url}{data['backdrop_path']}"
 
-        return data
-    except Exception as e:
-        logger.error(f"Error getting movie details for ID {movie_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get movie details")
+        # Normalize TV show data to match movie structure for frontend compatibility
+        if media_type == "tv":
+            data['title'] = data.get('name', data.get('title'))
+            data['release_date'] = data.get('first_air_date', data.get('release_date'))
+            data['runtime'] = data.get('episode_run_time', [0])[0] if data.get('episode_run_time') else 0
+            data['media_type'] = 'tv'
+        else:
+            data['media_type'] = 'movie'
 
-# Get reviews of a specific movie
-@app.get("/api/movies/{movie_id}/reviews")
-def get_movie_reviews(movie_id: int) -> Dict[str, Any]:
-    """Get reviews for a specific movie"""
-    try:
-        data = make_tmdb_request(f"/movie/{movie_id}/reviews")
         return data
     except Exception as e:
-        logger.error(f"Error getting movie reviews for ID {movie_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get movie reviews")
+        logger.error(f"Error getting content details for ID {content_id} (type: {media_type}): {e}")
+        raise HTTPException(status_code=500, detail="Failed to get content details")
 
-# Get watch providers for a specific movie
-@app.get("/api/movies/{movie_id}/watch/providers")
-def get_movie_watch_providers(movie_id: int) -> Dict[str, Any]:
-    """Get streaming/rental/purchase availability for a specific movie"""
+# Get reviews of a specific movie/TV show
+@app.get("/api/movies/{content_id}/reviews")
+def get_content_reviews(
+    content_id: int,
+    media_type: Optional[str] = Query(None, description="Media type: movie or tv")
+) -> Dict[str, Any]:
+    """Get reviews for a specific movie or TV show"""
     try:
-        data = make_tmdb_request(f"/movie/{movie_id}/watch/providers")
+        endpoint = f"/tv/{content_id}/reviews" if media_type == "tv" else f"/movie/{content_id}/reviews"
+        data = make_tmdb_request(endpoint)
         return data
     except Exception as e:
-        logger.error(f"Error getting watch providers for ID {movie_id}: {e}")
+        logger.error(f"Error getting reviews for ID {content_id} (type: {media_type}): {e}")
+        raise HTTPException(status_code=500, detail="Failed to get reviews")
+
+# Get watch providers for a specific movie/TV show
+@app.get("/api/movies/{content_id}/watch/providers")
+def get_content_watch_providers(
+    content_id: int,
+    media_type: Optional[str] = Query(None, description="Media type: movie or tv")
+) -> Dict[str, Any]:
+    """Get streaming/rental/purchase availability for a specific movie or TV show"""
+    try:
+        endpoint = f"/tv/{content_id}/watch/providers" if media_type == "tv" else f"/movie/{content_id}/watch/providers"
+        data = make_tmdb_request(endpoint)
+        return data
+    except Exception as e:
+        logger.error(f"Error getting watch providers for ID {content_id} (type: {media_type}): {e}")
         raise HTTPException(status_code=500, detail="Failed to get watch providers")
 
 # Cache management endpoints

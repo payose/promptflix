@@ -27,7 +27,7 @@ interface UseMovieStreamingOptions {
 export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreamingOptions) => {
     const dispatch = useDispatch<AppDispatch>();
 
-    const streamMovies = useCallback(async (query: string) => {
+    const streamMovies = useCallback(async (query: string, filter?: string) => {
         // Set loading state to true before starting the stream
         if (type === 'section') {
             dispatch(startSectionStreaming({ query }));
@@ -41,8 +41,15 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
             ? `/movies/section/stream`
             : `/movies/search/stream`;
 
+        // Build query parameters
+        const params = new URLSearchParams();
+        params.set('query', query);
+        if (filter) {
+            params.set('filter', filter);
+        }
+
         const eventSource = new EventSource(
-            `${baseUrl}${endpoint}?query=${encodeURIComponent(query)}`
+            `${baseUrl}${endpoint}?${params.toString()}`
         );
 
         eventSource.onmessage = (event) => {

@@ -18,6 +18,7 @@ export default function SearchResultsPage() {
 
     const searchParams = new URLSearchParams(location.search);
     const query = searchParams.get('q') || '';
+    const filter = searchParams.get('filter') || undefined;
     const movies = partialSearches[query] || [];
 
     // Generate SEO metadata
@@ -31,9 +32,9 @@ export default function SearchResultsPage() {
     useEffect(() => {
         if (query && !partialSearches[query]) {
             setIsStreaming(true);
-            streamMovies(query);
+            streamMovies(query, filter);
         }
-    }, [query, partialSearches, streamMovies]);
+    }, [query, filter, partialSearches, streamMovies]);
 
     // Stop showing streaming indicator once we have movies
     useEffect(() => {
