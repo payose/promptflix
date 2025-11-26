@@ -33,12 +33,12 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeav
 
     const cardContent = (
         <div
-            className={`relative group ${isLoading ? 'cursor-default' : 'cursor-pointer'} transition-all duration-300 ease-out overflow-hidden rounded-lg`}
+            className={`relative group ${isLoading ? 'cursor-default' : 'cursor-pointer'} transition-all duration-300 ease-out overflow-hidden rounded`}
             onMouseEnter={isLoading ? undefined : onHover}
             onMouseLeave={isLoading ? undefined : onLeave}
         >
 
-            <Card className={`overflow-hidden bg-gray-900 border-gray-700 transition-all duration-300 ${!isLoading && isHovered ? 'scale-105 z-50 shadow-2xl' : 'hover:scale-102'}`}>
+            <Card className={`rounded-md overflow-hidden bg-gray-900 border-gray-700 transition-all duration-300 ${!isLoading && isHovered ? 'scale-105 z-50 shadow-2xl' : 'hover:scale-102'}`}>
                 <CardContent className="p-0 relative">
                     <div className="aspect-[2/3] relative overflow-hidden bg-gray-800">
                         {isLoading ? (
@@ -95,14 +95,14 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeav
             </Card>
 
             {/* Title and year below card */}
-            <div className="mt-2 px-1">
+            {/* <div className="mt-2 px-1">
                 <h3 className="text-white font-semibold text-sm line-clamp-1">
                     {movie.title}
                 </h3>
                 <p className="text-gray-400 text-xs mt-0.5">
                     {'year' in movie ? movie.year : new Date(fullMovie!.release_date).getFullYear()}
                 </p>
-            </div>
+            </div> */}
         </div>
     );
 

@@ -5,10 +5,8 @@ const promptSuggestions = [
     'small town horror movies',
     'Movies with irredeemable villains',
     'Action thrillers with inconceivable plot twists',
-    'Heartwarming family dramas',
     'Movies directed by Christopher Nolan',
-    'Classic noir films from the 40s',
-    'Movies about artificial intelligence',
+    'Dark psychological thrillers with unreliable narrators',
     'Feel-good romantic comedies from the 90s',
 ]
 
