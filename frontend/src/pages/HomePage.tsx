@@ -59,7 +59,7 @@ const HomePage = () => {
                 url="/"
                 structuredData={structuredData}
             />
-            <div className="min-h-screen w-screen">
+            <div className="min-h-screen w-screen relative">
                 <Header hideSearchBox={isHeroVisible} />
 
                 {/* Hero Section */}
@@ -67,9 +67,9 @@ const HomePage = () => {
                     <HeroSection />
                 </div>
 
-                <div className="mx-auto lg:px-24 space-y-12 mt-12">
-                    <div className='mt-4'>
-                        <SectionResults />
+                <div className="relative -top-28 mx-auto space-y-12">
+                    <div id="examples-section" className='mt-4'>
+                        <SectionResults className='lg:pl-10' />
                     </div>
                 </div>
             </div>

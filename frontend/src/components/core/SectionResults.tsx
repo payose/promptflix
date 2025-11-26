@@ -55,10 +55,9 @@ const MovieSection = ({ query, movies }: MovieSectionProps) => {
             <div className="px-4 md:px-8">
                 <div className="mb-6">
                 {/* <h2 className="text-base md:text-xl font-medium text-white/85 pb-4"> */}
-                    <h2 className="text-lg md:text-2xl font-semibold text-transparent bg-clip-text bg-purple-300 pb-1 inline-block">
+                    <h2 className="text-lg md:text-xl font-semibold text-transparent bg-clip-text bg-gray-300 inline-block">
                         {query}
                     </h2>
-                    <div className="h-0.5 w-20 bg-pink-500 mt-2 rounded-full"></div>
                 </div>
 
                 {/* Movies Row */}
@@ -102,7 +101,7 @@ const MovieSection = ({ query, movies }: MovieSectionProps) => {
                             const movieId = isFullMovie ? movie.id : `${movie.title}-${index}`;
 
                             return (
-                                <div key={movieId} className="flex-none w-32 md:w-52">
+                                <div key={movieId} className="flex-none w-32 md:w-44">
                                     <MovieCard
                                         movie={movie}
                                         isHovered={isFullMovie && hoveredMovie === movie.id}
