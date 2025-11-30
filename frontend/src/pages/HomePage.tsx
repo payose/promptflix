@@ -52,28 +52,47 @@ const HomePage = () => {
     };
 
     return (
-        <div className="">
+        <>
             <SEO
                 title="PromptFlix - Discover Movies with AI"
                 description="Discover your next watch with AI-powered recommendations. Search for movies using natural language and get personalized suggestions instantly."
                 url="/"
                 structuredData={structuredData}
             />
+
+            {/* Skip to main content link for keyboard users */}
+            <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-purple-600 focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+            >
+                Skip to main content
+            </a>
+
             <div className="min-h-screen w-screen relative">
                 <Header hideSearchBox={isHeroVisible} />
 
-                {/* Hero Section */}
-                <div ref={heroRef} className="mt-20">
-                    <HeroSection />
-                </div>
+                {/* Main content area */}
+                <main id="main-content" className="mt-20">
+                    {/* Hero Section */}
+                    <section
+                        ref={heroRef}
+                        aria-label="Search for movies"
+                        className="relative"
+                    >
+                        <HeroSection />
+                    </section>
 
-                <div className="relative -top-28 mx-auto space-y-12">
-                    <div id="examples-section" className="mt-4">
+                    {/* Movie recommendations section */}
+                    <section
+                        id="examples-section"
+                        aria-label="Movie recommendations"
+                        className="relative -top-28 mx-auto space-y-12 mt-4"
+                    >
                         <SectionResults />
-                    </div>
-                </div>
+                    </section>
+                </main>
             </div>
-        </div>
+        </>
     );
 };
 

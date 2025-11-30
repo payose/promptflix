@@ -18,17 +18,6 @@ const filters: { value: FilterType; label: string; icon: typeof Film }[] = [
     { value: 'k-drama', label: 'K-Drama', icon: Clapperboard },
 ];
 
-const promptTemplates = [
-    'Small town horror movies',
-    'Movies with irredeemable villains',
-    'Action thrillers with inconceivable plot twists',
-    'Movies directed by Christopher Nolan',
-    'Dark psychological thrillers with unreliable narrators',
-    'Feel-good romantic comedies from the 90s',
-    'Mind-bending sci-fi with time travel',
-    'Heartwarming stories about friendship',
-];
-
 export default function SearchModal({ isOpen, onClose, initialQuery = '' }: SearchModalProps) {
     const [query, setQuery] = useState(initialQuery);
     const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
@@ -78,39 +67,45 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
         onClose();
     };
 
-    const handleTemplateClick = (template: string) => {
-        setQuery(template);
+    // Handle Enter key submission
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && canSubmit) {
+            e.preventDefault();
+            handleSearch();
+        }
     };
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-labelledby="search-modal-title">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-black/80 backdrop-blur-md"
                 onClick={onClose}
+                aria-hidden="true"
             />
 
             {/* Modal Content */}
             <div className="relative w-full max-w-3xl bg-gray-900/95 rounded-2xl shadow-2xl border border-purple-500/30 overflow-hidden animate-in zoom-in-95 duration-200">
                 {/* Gradient border effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-amber-500/20 blur-xl" />
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-amber-500/20 blur-xl" aria-hidden="true" />
 
                 <div className="relative bg-gray-900/95 rounded-2xl">
                     {/* Header */}
                     <div className="flex items-center justify-between p-6 border-b border-purple-500/20">
                         <div className="flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-amber-500" />
-                            <h2 className="text-xl font-semibold text-gray-100">
+                            <Sparkles className="w-5 h-5 text-amber-500" aria-hidden="true" />
+                            <h2 id="search-modal-title" className="text-xl font-semibold text-gray-100">
                                 What are you in the mood to watch?
                             </h2>
                         </div>
                         <button
                             onClick={onClose}
+                            aria-label="Close search dialog"
                             className="p-2 rounded-full hover:bg-gray-800 transition-colors text-gray-400 hover:text-gray-200"
                         >
-                            <X className="w-5 h-5" />
+                            <X className="w-5 h-5" aria-hidden="true" />
                         </button>
                     </div>
 
@@ -118,41 +113,56 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
                     <div className="p-6 space-y-6">
                         {/* Large Textarea */}
                         <div className="space-y-2">
+                            <label htmlFor="movie-search-query" className="sr-only">
+                                Describe the movie you want to watch
+                            </label>
                             <textarea
+                                id="movie-search-query"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
+                                onKeyDown={handleKeyDown}
                                 maxLength={250}
                                 placeholder="Describe your perfect movie in detail... e.g., 'A mind-bending thriller that makes me question reality, with complex characters and stunning cinematography'"
+                                aria-describedby="search-validation-message search-character-count"
                                 className="w-full h-32 px-4 py-3 bg-gray-800/50 border border-purple-500/30 rounded-xl text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50 resize-none transition-all"
                                 autoFocus
                             />
                             <div className="flex items-center justify-between text-xs">
-                                <span className={`${
-                                    query.trim().length < 10
-                                        ? 'text-amber-500'
-                                        : isValidLength
-                                        ? 'text-green-500'
-                                        : 'text-red-500'
-                                }`}>
+                                <span
+                                    id="search-validation-message"
+                                    className={`${
+                                        query.trim().length < 10
+                                            ? 'text-amber-500'
+                                            : isValidLength
+                                            ? 'text-green-500'
+                                            : 'text-red-500'
+                                    }`}
+                                    role="status"
+                                    aria-live="polite"
+                                >
                                     {query.trim().length < 10
                                         ? `Minimum ${10 - query.trim().length} more characters required`
                                         : isValidLength
                                         ? 'Ready to search'
                                         : 'Maximum character limit reached'}
                                 </span>
-                                <span className={`${query.length > 240 ? 'text-amber-500' : 'text-gray-500'}`}>
+                                <span
+                                    id="search-character-count"
+                                    className={`${query.length > 240 ? 'text-amber-500' : 'text-gray-500'}`}
+                                    aria-live="polite"
+                                >
                                     {query.length}/250
                                 </span>
                             </div>
                         </div>
 
                         {/* Content Type Filters */}
-                        <div className="space-y-3">
-                            <h3 className="text-sm font-medium text-gray-400 flex items-center gap-2">
-                                <Film className="w-4 h-4" />
+                        <fieldset className="space-y-3">
+                            <legend className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                                <Film className="w-4 h-4" aria-hidden="true" />
                                 Content Type <span className="text-gray-600 font-normal">(Optional)</span>
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
+                            </legend>
+                            <div className="flex flex-wrap gap-2" role="group" aria-label="Content type filters">
                                 {filters.map((filter) => {
                                     const Icon = filter.icon;
                                     const isSelected = selectedFilter === filter.value;
@@ -160,6 +170,8 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
                                         <button
                                             key={filter.value}
                                             onClick={() => setSelectedFilter(filter.value)}
+                                            aria-pressed={isSelected}
+                                            aria-label={`Filter by ${filter.label}`}
                                             className={`group relative overflow-hidden flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
                                                 isSelected
                                                     ? 'bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-amber-500/20 border-2 border-pink-500/60'
@@ -168,7 +180,7 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
                                         >
                                             <Icon className={`w-4 h-4 transition-colors ${
                                                 isSelected ? 'text-amber-400' : 'text-gray-400 group-hover:text-amber-400'
-                                            }`} />
+                                            }`} aria-hidden="true" />
                                             <span className={`text-sm transition-colors ${
                                                 isSelected ? 'text-white font-medium' : 'text-gray-300 group-hover:text-white'
                                             }`}>
@@ -178,27 +190,7 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
                                     );
                                 })}
                             </div>
-                        </div>
-
-                        {/* Prompt Templates */}
-                        <div className="space-y-3">
-                            <h3 className="text-sm font-medium text-gray-400 flex items-center gap-2">
-                                <Sparkles className="w-4 h-4" />
-                                Try These Prompts
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                                {promptTemplates.map((template, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => handleTemplateClick(template)}
-                                        className="group relative overflow-hidden px-3 py-1.5 bg-gray-800/30 hover:bg-gray-800/50 border border-purple-500/20 hover:border-amber-500/40 rounded-full text-xs text-gray-400 hover:text-gray-200 transition-all duration-300"
-                                    >
-                                        <span className="relative z-10">{template}</span>
-                                        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-pink-500/0 to-amber-500/0 group-hover:from-purple-500/10 group-hover:via-pink-500/10 group-hover:to-amber-500/10 transition-all" />
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                        </fieldset>
                     </div>
 
                     {/* Footer */}
