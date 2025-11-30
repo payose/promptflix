@@ -1,7 +1,7 @@
 # PromptFlix
 > **AI-powered movie discovery using natural language search**
 
-🔗 **Live Platform:** [promptflix.com](https://promptflix.com)
+🔗 **Live Platform:** [promptflix.com](https://promptflix-frontend.onrender.com/)
 
 ## 🎯 What It Does
 
@@ -16,7 +16,7 @@ PromptFlix helps you find the perfect movie by simply describing what you want t
 
 - **Movie enthusiasts** tired of endless scrolling through streaming platforms
 - **Anyone** who knows what mood they're in but not what to watch
-- **Casual viewers** who want quick, personalized recommendations without the hassle
+- **Casual viewers** who want quick, personalised recommendations without the hassle
 
 ## 🚀 The Problem It Solves
 
@@ -39,9 +39,9 @@ Traditional movie platforms make you browse through thousands of titles or rely 
 
 2. **AI-Powered Search** - Our intelligent system processes your request and understands your preferences
 
-3. **Get Personalized Recommendations** - Receive curated movie suggestions that match your description, complete with ratings, posters, and details
+3. **Get Personalised Recommendations** - Receive curated movie suggestions that match your description, complete with ratings, posters, and details
 
-4. **Discover & Watch** - Browse your results and find your next favorite movie
+4. **Discover & Watch** - Browse your results and find your next favourite movie
 
 ## Features
 
@@ -135,7 +135,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Live Platform
 
-Visit [PromptFlix](https://promptflix.com) to experience AI-powered movie discovery today!
+Visit [PromptFlix](https://promptflix-frontend.onrender.com/) to experience AI-powered movie discovery today!
 
 ---
 
