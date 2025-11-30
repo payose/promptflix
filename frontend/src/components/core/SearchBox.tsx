@@ -54,20 +54,25 @@ export default function SearchBox() {
 
     return (
         <>
-            <div className="w-full">
+            <div className="w-full" role="search">
                 <button
                     onClick={handleOpenModal}
+                    aria-label="Open movie search dialog"
+                    aria-haspopup="dialog"
                     className="w-full group relative overflow-hidden"
                 >
                     <div className="relative w-full flex items-center justify-between rounded-full border border-purple-500/30 bg-gray-900/80 backdrop-blur-sm group-hover:border-pink-500/60 group-hover:shadow-lg group-hover:shadow-pink-500/20 transition-all duration-300 px-4 sm:px-6 py-2.5 sm:py-3">
                         <div className="flex items-center gap-3 flex-1">
-                            <SearchIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-amber-400 transition-colors" />
+                            <SearchIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-amber-400 transition-colors" aria-hidden="true" />
                             <span className="text-sm sm:text-base text-gray-400 group-hover:text-gray-300 transition-colors">
                                 What are you in the mood to watch?
                             </span>
                         </div>
                     </div>
                 </button>
+                <div className="sr-only" role="status" aria-live="polite">
+                    Press Command+K or Control+K to open search
+                </div>
             </div>
 
             {/* Search Modal */}

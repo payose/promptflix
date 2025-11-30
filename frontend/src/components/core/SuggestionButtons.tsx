@@ -22,17 +22,18 @@ function SuggestionButtons() {
     };
 
     return (
-        <div className="flex flex-wrap justify-center gap-3 lg:max-w-4xl mx-auto">
+        <div className="flex flex-wrap justify-center gap-3 lg:max-w-4xl mx-auto" role="group" aria-label="Movie search suggestions">
             {promptSuggestions.map((prompt, index) => (
                 <Button
                     key={index}
                     variant="outline"
                     size="sm"
                     onClick={() => handlePromptClick(prompt)}
+                    aria-label={`Search for ${prompt}`}
                     className="group relative overflow-hidden rounded-full border-purple-500/30 bg-gray-900/50 backdrop-blur-sm text-gray-300 hover:text-white hover:border-amber-500 hover:bg-gray-900/50 transition-all duration-300"
                 >
                     <span className="relative z-10">{prompt}</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-amber-500/0 to-cyan-500/0 group-hover:from-purple-500/10 group-hover:via-amber-500/10 group-hover:to-cyan-500/10 transition-all duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-amber-500/0 to-cyan-500/0 group-hover:from-purple-500/10 group-hover:via-amber-500/10 group-hover:to-cyan-500/10 transition-all duration-300" aria-hidden="true" />
                 </Button>
             ))}
         </div>
