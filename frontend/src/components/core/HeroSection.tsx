@@ -1,4 +1,3 @@
-import { Sparkles, Zap, Film } from 'lucide-react';
 import SearchBox from '@/components/core/SearchBox';
 import SuggestionButtons from '@/components/core/SuggestionButtons';
 
@@ -45,22 +44,6 @@ export default function HeroSection() {
                         <SuggestionButtons />
                     </div>
                 </div>
-
-                {/* Decorative elements */}
-                {/* <div className="mt-16 flex justify-center gap-3 lg:gap-8 opacity-40">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-                        <span className="text-xs text-gray-400 text-nowrap">AI-Powered</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse delay-300" />
-                        <span className="text-xs text-gray-400 text-nowrap">Highly Rated Movies</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse delay-700" />
-                        <span className="text-xs text-gray-400 text-nowrap">Instant Results</span>
-                    </div>
-                </div> */}
             </div>
         </div>
     );

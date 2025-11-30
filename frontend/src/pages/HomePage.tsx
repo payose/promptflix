@@ -68,8 +68,8 @@ const HomePage = () => {
                 </div>
 
                 <div className="relative -top-28 mx-auto space-y-12">
-                    <div id="examples-section" className='mt-4'>
-                        <SectionResults className='lg:pl-10' />
+                    <div id="examples-section" className="mt-4">
+                        <SectionResults />
                     </div>
                 </div>
             </div>
