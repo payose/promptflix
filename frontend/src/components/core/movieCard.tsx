@@ -1,8 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import type { Movie } from '@/types/movie';
-import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom'
-import { Star, Play, Plus } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 interface PartialMovie {
     title: string;
@@ -75,16 +74,6 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeav
                                             </div>
                                             <span>•</span>
                                             <span>{new Date(fullMovie!.release_date).getFullYear()}</span>
-                                        </div>
-
-                                        <div className="flex gap-2">
-                                            <Button role='button' size="sm" className="h-8 px-3 bg-amber-400 text-black hover:bg-amber-400 hover:border-amber-500">
-                                                <Play className="w-3 h-3 mr-1" />
-                                                Play
-                                            </Button>
-                                            <Button role='button' size="sm" className="h-8 w-8 p-0 bg-amber-400 text-black hover:bg-amber-400 hover:border-amber-500">
-                                                <Plus className="w-3 h-3" />
-                                            </Button>
                                         </div>
                                     </div>
                                 </div>

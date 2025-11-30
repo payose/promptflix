@@ -15,9 +15,9 @@ const PreviousPage: React.FC = () => {
     return (
         <button
             onClick={goBack}
-            className="flex items-center gap-2 text-sm text-gray-300 bg-gray-800/50 hover:text-white mb-6"
+            className="py-3 px-6 rounded-lg border  flex items-center gap-2 text-sm text-gray-300 bg-gray-800/50 border-gray-800/50 hover:border-amber-500 hover:text-amber-500 mb-6"
         >
-            <ArrowLeft className='w-5 h-5' /> Back to Search
+            <ArrowLeft className='w-5 h-5' /> Back
         </button>
     );
 };

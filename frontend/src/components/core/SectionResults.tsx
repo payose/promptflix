@@ -50,7 +50,7 @@ const MovieSection = ({ query, movies }: MovieSectionProps) => {
     }
 
     return (
-        <div className="relative group mb-16">
+        <div className="relative group mb-16 lg:pl-10">
             {/* Section Header */}
             <div className="px-4 md:px-8">
                 <div className="mb-6">
