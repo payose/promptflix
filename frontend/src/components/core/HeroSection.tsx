@@ -1,3 +1,4 @@
+import { Film } from 'lucide-react';
 import SearchBox from '@/components/core/SearchBox';
 import SuggestionButtons from '@/components/core/SuggestionButtons';
 
