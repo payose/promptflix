@@ -18,17 +18,6 @@ const filters: { value: FilterType; label: string; icon: typeof Film }[] = [
     { value: 'k-drama', label: 'K-Drama', icon: Clapperboard },
 ];
 
-const promptTemplates = [
-    'Small town horror movies',
-    'Movies with irredeemable villains',
-    'Action thrillers with inconceivable plot twists',
-    'Movies directed by Christopher Nolan',
-    'Dark psychological thrillers with unreliable narrators',
-    'Feel-good romantic comedies from the 90s',
-    'Mind-bending sci-fi with time travel',
-    'Heartwarming stories about friendship',
-];
-
 export default function SearchModal({ isOpen, onClose, initialQuery = '' }: SearchModalProps) {
     const [query, setQuery] = useState(initialQuery);
     const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
@@ -76,10 +65,6 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
 
         navigate(`/search?${params.toString()}`);
         onClose();
-    };
-
-    const handleTemplateClick = (template: string) => {
-        setQuery(template);
     };
 
     if (!isOpen) return null;
@@ -177,26 +162,6 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
                                         </button>
                                     );
                                 })}
-                            </div>
-                        </div>
-
-                        {/* Prompt Templates */}
-                        <div className="space-y-3">
-                            <h3 className="text-sm font-medium text-gray-400 flex items-center gap-2">
-                                <Sparkles className="w-4 h-4" />
-                                Try These Prompts
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                                {promptTemplates.map((template, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => handleTemplateClick(template)}
-                                        className="group relative overflow-hidden px-3 py-1.5 bg-gray-800/30 hover:bg-gray-800/50 border border-purple-500/20 hover:border-amber-500/40 rounded-full text-xs text-gray-400 hover:text-gray-200 transition-all duration-300"
-                                    >
-                                        <span className="relative z-10">{template}</span>
-                                        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-pink-500/0 to-amber-500/0 group-hover:from-purple-500/10 group-hover:via-pink-500/10 group-hover:to-amber-500/10 transition-all" />
-                                    </button>
-                                ))}
                             </div>
                         </div>
                     </div>

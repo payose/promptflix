@@ -54,7 +54,6 @@ const MovieSection = ({ query, movies }: MovieSectionProps) => {
             {/* Section Header */}
             <div className="px-4 md:px-8">
                 <div className="mb-6">
-                {/* <h2 className="text-base md:text-xl font-medium text-white/85 pb-4"> */}
                     <h2 className="text-lg md:text-xl font-semibold text-transparent bg-clip-text bg-gray-300 inline-block">
                         {query}
                     </h2>

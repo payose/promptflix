@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
+// import { Button } from '@/components/ui/button'
 import SearchBox from '@/components/core/SearchBox';
 
 interface HeaderProps {
@@ -40,7 +40,7 @@ export default function Header({ hideSearchBox = false }: HeaderProps) {
         </div>
 
         {/* Movie List Button - Hidden on very small screens */}
-        <div className="hidden sm:block whitespace-nowrap flex-shrink-0">
+        {/* <div className="hidden sm:block whitespace-nowrap flex-shrink-0">
           <Button 
             variant="ghost" 
             size="sm"
@@ -48,7 +48,7 @@ export default function Header({ hideSearchBox = false }: HeaderProps) {
           >
             Movie List
           </Button>
-        </div>
+        </div> */}
       </div>
     </header>
   )

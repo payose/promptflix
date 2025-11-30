@@ -86,7 +86,7 @@ export default function SearchResultsPage() {
                     )}
 
                     {movies.length > 0 && (
-                        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                        <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
                             {movies.map((movie, index) => {
                                 const isFullMovie = 'id' in movie && movie.id !== undefined;
                                 const movieId = isFullMovie ? movie.id : `${movie.title}-${index}`;
