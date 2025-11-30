@@ -44,67 +44,96 @@ export default function SearchResultsPage() {
     }, [partialSearches, query]);
 
     return (
-        <div className="min-h-screen bg-black text-white">
+        <>
             <SEO
                 title={pageTitle}
                 description={pageDescription}
                 url={`/search?q=${encodeURIComponent(query)}`}
                 keywords={`${query}, movies, AI recommendations, film search, movie discovery`}
             />
-            <Header />
-            
-            <div className="mt-20 container mx-auto p-6">
-                <PreviousPage />
 
-                <div className="container mx-auto">
+            {/* Skip to main content link for keyboard users */}
+            <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-purple-600 focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+            >
+                Skip to main content
+            </a>
 
-                    {query && (
-                        <div className="mb-6">
-                            <h1 className="text-base md:text-xl font-medium text-gray-200">
-                                Results for: "{query}"
-                            </h1>
-                        </div>
-                    )}
+            <div className="min-h-screen bg-black text-white">
+                <Header />
 
-                    {(loading || isStreaming) && movies.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-20">
-                            <Loader2 className="h-12 w-12 text-pink-500 animate-spin mb-4" />
-                            <span className="text-gray-400">Finding movies for you...</span>
-                        </div>
-                    )}
+                <main id="main-content" className="mt-20 container mx-auto p-6">
+                    <PreviousPage />
 
-                    {error && (
-                        <div className="text-center py-20">
-                            <p className="text-red-400">Error: {error}</p>
-                        </div>
-                    )}
+                    <div className="container mx-auto">
+                        {query && (
+                            <header className="mb-6">
+                                <h1 className="text-base md:text-xl font-medium text-gray-200">
+                                    Results for: "{query}"
+                                </h1>
+                            </header>
+                        )}
 
-                    {!loading && !isStreaming && movies.length === 0 && query && (
-                        <div className="text-center py-20">
-                            <p className="text-gray-400">No movies found for your search.</p>
-                        </div>
-                    )}
+                        {(loading || isStreaming) && movies.length === 0 && (
+                            <div
+                                className="flex flex-col items-center justify-center py-20"
+                                role="status"
+                                aria-live="polite"
+                                aria-label="Loading search results"
+                            >
+                                <Loader2 className="h-12 w-12 text-pink-500 animate-spin mb-4" aria-hidden="true" />
+                                <span className="text-gray-400">Finding movies for you...</span>
+                            </div>
+                        )}
 
-                    {movies.length > 0 && (
-                        <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
-                            {movies.map((movie, index) => {
-                                const isFullMovie = 'id' in movie && movie.id !== undefined;
-                                const movieId = isFullMovie ? movie.id : `${movie.title}-${index}`;
+                        {error && (
+                            <div
+                                className="text-center py-20"
+                                role="alert"
+                                aria-live="assertive"
+                            >
+                                <p className="text-red-400">Error: {error}</p>
+                            </div>
+                        )}
 
-                                return (
-                                    <MovieCard
-                                        key={movieId}
-                                        movie={movie}
-                                        isHovered={isFullMovie && hoveredMovieId === movie.id}
-                                        onHover={isFullMovie ? () => setHoveredMovieId(movie.id) : undefined}
-                                        onLeave={isFullMovie ? () => setHoveredMovieId(null) : undefined}
-                                    />
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
+                        {!loading && !isStreaming && movies.length === 0 && query && (
+                            <div
+                                className="text-center py-20"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                <p className="text-gray-400">No movies found for your search.</p>
+                            </div>
+                        )}
+
+                        {movies.length > 0 && (
+                            <section aria-label={`Search results for ${query}`}>
+                                <div
+                                    className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3"
+                                    role="list"
+                                >
+                                    {movies.map((movie, index) => {
+                                        const isFullMovie = 'id' in movie && movie.id !== undefined;
+                                        const movieId = isFullMovie ? movie.id : `${movie.title}-${index}`;
+
+                                        return (
+                                            <div key={movieId} role="listitem">
+                                                <MovieCard
+                                                    movie={movie}
+                                                    isHovered={isFullMovie && hoveredMovieId === movie.id}
+                                                    onHover={isFullMovie ? () => setHoveredMovieId(movie.id) : undefined}
+                                                    onLeave={isFullMovie ? () => setHoveredMovieId(null) : undefined}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </section>
+                        )}
+                    </div>
+                </main>
             </div>
-        </div>
+        </>
     );
 }
