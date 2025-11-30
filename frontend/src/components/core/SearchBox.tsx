@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { SearchIcon, Command } from 'lucide-react';
+import { SearchIcon } from 'lucide-react';
 import SearchModal from './SearchModal';
 
 export default function SearchBox() {
