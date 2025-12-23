@@ -43,7 +43,10 @@ class APIService {
                 baseURL: config.baseURL,
                 params: config.authType === 'urlParam' && config.keyParam
                     ? { [config.keyParam]: config.apiKey }
-                    : {}
+                    : {},
+                // IMPORTANT: Enable credentials (cookies) for cross-origin requests
+                // This allows the backend to set/read session_id cookie
+                withCredentials: serviceName === 'backend'
             };
 
             const instance = axios.create(axiosConfig);

@@ -1,6 +1,19 @@
 version: "3.8"
 
 services:
+  db:
+    image: postgres:15-alpine
+    container_name: promptflix-db
+    environment:
+      POSTGRES_USER: promptflix
+      POSTGRES_PASSWORD: promptflix_dev
+      POSTGRES_DB: promptflix
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   backend:
     build: ./backend
     container_name: promptflix-backend
@@ -12,6 +25,9 @@ services:
       - ./backend/.env
     environment:
       - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://promptflix:promptflix_dev@db:5432/promptflix
+    depends_on:
+      - db
     restart: unless-stopped
 
   frontend:
@@ -22,3 +38,6 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+volumes:
+  postgres_data:

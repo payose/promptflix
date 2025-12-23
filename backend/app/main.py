@@ -1,7 +1,9 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 import requests
 import os
 import logging
@@ -9,6 +11,12 @@ from typing import List, Dict, Any, Optional
 import json
 import asyncio
 from dotenv import load_dotenv
+
+from .session import SessionMiddleware, get_session_id, get_user_id
+from .database import get_db
+from .models.tracking import SearchHistory, ClickEvent
+from .models.user import User
+from .auth import link_session_to_user, create_user
 
 # Load environment variables from .env file
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -42,14 +50,22 @@ else:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS if ALLOWED_ORIGINS else ["*"],
-    allow_credentials=False,  # Set to False when using wildcard origins
+    allow_credentials=True,  # IMPORTANT: Must be True to send/receive cookies
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
 
+# Add session middleware for anonymous user tracking
+# Why: Automatically manages session_id cookies for tracking before login
+app.add_middleware(SessionMiddleware)
+
 # Log CORS configuration
 logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
+
+# Password hashing configuration
+# Why bcrypt? Industry standard, slow by design (makes brute-force attacks harder)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Environment variables
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
@@ -67,6 +83,33 @@ class RecommendMoviesRequest(BaseModel):
 class MovieListItem(BaseModel):
     title: str
     year: int
+
+class ClickEventRequest(BaseModel):
+    """
+    Request model for tracking movie clicks
+
+    Why we need this:
+    - movie_id: The TMDB ID of the clicked movie
+    - movie_title: Human-readable title for analytics
+    """
+    movie_id: int
+    movie_title: str
+
+class SignupRequest(BaseModel):
+    """
+    Request model for user signup
+
+    Why simple for now:
+    - Just email and password for MVP
+    - Can add username, profile info later
+    """
+    email: str
+    password: str
+
+class LoginRequest(BaseModel):
+    """Request model for user login"""
+    email: str
+    password: str
 
 # In-memory cache for API responses
 search_cache: Dict[str, List[Dict[str, Any]]] = {}
@@ -257,9 +300,19 @@ def fetch_movie_details(movie_item: MovieListItem, content_filter: Optional[str]
 @app.get("/api/movies/search")
 def search_movies_with_ai(
     query: str = Query(..., description="Search query for movie recommendations"),
-    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama")
+    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama"),
+    session_id: str = Depends(get_session_id),  # Get session_id from cookie
+    user_id: Optional[int] = Depends(get_user_id),  # Get user_id if logged in
+    db: Session = Depends(get_db)  # Get database session
 ) -> Dict[str, Any]:
-    """Search for movies/TV shows using AI recommendations + TMDB details (mirrors queryAIforMovieList)"""
+    """
+    Search for movies using AI recommendations + TMDB details (mirrors queryAIforMovieList)
+
+    Why the new dependencies:
+    - session_id: Tracks anonymous users via cookie
+    - user_id: If user is logged in, links search to their account
+    - db: Database session to save search history
+    """
 
     # Create cache key that includes filter
     cache_key = f"{query}_{filter or 'all'}"
@@ -288,6 +341,18 @@ def search_movies_with_ai(
         # Cache the results with filter-specific key
         search_cache[cache_key] = detailed_movies
 
+        # Step 3: Save search to database for tracking
+        # Why: Track what users search for, even when anonymous
+        search_record = SearchHistory(
+            session_id=session_id,  # Always present (from cookie)
+            user_id=user_id,  # None if anonymous, set if logged in
+            query=query,
+            results_count=len(detailed_movies)
+        )
+        db.add(search_record)
+        db.commit()
+        logger.info(f"Saved search to database: session_id={session_id}, user_id={user_id}")
+
         logger.info(f"Successfully fetched details for {len(detailed_movies)} items")
         return {
             "query": query,
@@ -297,15 +362,23 @@ def search_movies_with_ai(
 
     except Exception as e:
         logger.error(f"Error in search_movies_with_ai: {e}")
+        db.rollback()  # Rollback database changes on error
         raise HTTPException(status_code=500, detail="Failed to search movies")
 
 # Streaming endpoint for search (progressive loading)
 @app.get("/api/movies/search/stream")
 async def stream_movie_search(
     query: str = Query(..., description="Search query for movie recommendations"),
-    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama")
+    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama"),
+    session_id: Optional[str] = Query(None, description="Session ID from cookie (for EventSource compatibility)"),
+    user_id: Optional[int] = Depends(get_user_id),
+    db: Session = Depends(get_db),
+    session_id_from_cookie: str = Depends(get_session_id)
 ):
     """Stream movie search data - first titles, then progressive TMDB details"""
+
+    # Use session_id from query param if provided (EventSource), otherwise use cookie
+    actual_session_id = session_id or session_id_from_cookie
 
     async def event_generator():
         try:
@@ -315,6 +388,22 @@ async def stream_movie_search(
             # Check cache first - if cached, send all at once
             if cache_key in search_cache:
                 logger.info(f"Returning cached results for search query: {query} (filter: {filter})")
+
+                # Save cached search to database too
+                try:
+                    search_record = SearchHistory(
+                        session_id=actual_session_id,
+                        user_id=user_id,
+                        query=query,
+                        results_count=len(search_cache[cache_key])
+                    )
+                    db.add(search_record)
+                    db.commit()
+                    logger.info(f"Saved cached search to database: session_id={actual_session_id}, user_id={user_id}")
+                except Exception as db_error:
+                    logger.error(f"Failed to save cached search to database: {db_error}")
+                    db.rollback()
+
                 yield f"data: {json.dumps({'type': 'complete', 'query': query, 'movies': search_cache[cache_key]})}\n\n"
                 return
 
@@ -339,6 +428,21 @@ async def stream_movie_search(
 
             # Cache the complete results with filter-specific key
             search_cache[cache_key] = detailed_movies
+
+            # Save search to database for tracking
+            try:
+                search_record = SearchHistory(
+                    session_id=actual_session_id,
+                    user_id=user_id,
+                    query=query,
+                    results_count=len(detailed_movies)
+                )
+                db.add(search_record)
+                db.commit()
+                logger.info(f"Saved search to database: session_id={actual_session_id}, user_id={user_id}")
+            except Exception as db_error:
+                logger.error(f"Failed to save search to database: {db_error}")
+                db.rollback()
 
             # Send completion signal
             yield f"data: {json.dumps({'type': 'done', 'query': query, 'total': len(detailed_movies)})}\n\n"
@@ -606,6 +710,160 @@ def direct_tmdb_search(query: str = Query(..., description="Movie search query")
     except Exception as e:
         logger.error(f"Error in direct TMDB search: {e}")
         raise HTTPException(status_code=500, detail="Failed to search movies")
+
+# Click tracking endpoint
+@app.post("/api/track/click")
+def track_movie_click(
+    event: ClickEventRequest,
+    session_id: str = Depends(get_session_id),
+    user_id: Optional[int] = Depends(get_user_id),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Track when a user clicks on a movie
+
+    Why this endpoint exists:
+    - Records user engagement with movies
+    - Links clicks to session_id (anonymous tracking)
+    - Links to user_id if logged in
+    - Useful for recommendations and analytics
+
+    Frontend should call this when user:
+    - Clicks on a movie card to view details
+    - Navigates to /movie/{id}
+    """
+    try:
+        click_record = ClickEvent(
+            session_id=session_id,
+            user_id=user_id,
+            movie_id=event.movie_id,
+            movie_title=event.movie_title
+        )
+        db.add(click_record)
+        db.commit()
+        logger.info(f"Tracked click: movie_id={event.movie_id}, session_id={session_id}, user_id={user_id}")
+
+        return {
+            "success": True,
+            "message": "Click tracked successfully",
+            "movie_id": event.movie_id
+        }
+
+    except Exception as e:
+        logger.error(f"Error tracking click: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to track click")
+
+
+# User signup endpoint
+@app.post("/api/auth/signup")
+def signup(
+    request: SignupRequest,
+    session_id: str = Depends(get_session_id),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Create a new user account and link anonymous activity.
+
+    Why this flow:
+    1. Check if email already exists (prevent duplicates)
+    2. Hash the password (NEVER store plaintext!)
+    3. Create user in database
+    4. Link all their anonymous activity (searches, clicks) to their new account
+    5. Return user info (but NOT the password hash!)
+
+    This is THE MAGIC MOMENT where anonymous becomes identified.
+    """
+    try:
+        # Check if user already exists
+        existing_user = db.query(User).filter(User.email == request.email).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+
+        # Hash password (bcrypt makes this slow on purpose - security feature)
+        password_hash = pwd_context.hash(request.password)
+
+        # Create user
+        user = create_user(email=request.email, password_hash=password_hash, db=db)
+
+        # CRITICAL: Link all anonymous activity to this new user
+        # Why? User has been browsing anonymously, now we "claim" that history
+        link_result = link_session_to_user(session_id, user.id, db)
+
+        logger.info(f"New user signed up: {user.id}, linked {link_result['total_linked']} records")
+
+        return {
+            "success": True,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "created_at": user.created_at.isoformat() if user.created_at else None
+            },
+            "linked_activity": link_result
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in signup: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Signup failed")
+
+
+# User login endpoint
+@app.post("/api/auth/login")
+def login(
+    request: LoginRequest,
+    session_id: str = Depends(get_session_id),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Login existing user and link any new anonymous activity.
+
+    Why link on login too?
+    - User might have used app anonymously on a new device
+    - Or cleared cookies and browsed before logging in
+    - We want to capture that activity too!
+
+    Flow:
+    1. Find user by email
+    2. Verify password matches
+    3. Link any anonymous activity from this session
+    4. Return user info
+    """
+    try:
+        # Find user
+        user = db.query(User).filter(User.email == request.email).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+
+        # Verify password
+        # Why not just compare strings? Hash is one-way, must use verify()
+        if not pwd_context.verify(request.password, user.password_hash):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+
+        # Link any anonymous activity from this session to the user
+        # Why? User may have browsed before logging in
+        link_result = link_session_to_user(session_id, user.id, db)
+
+        logger.info(f"User logged in: {user.id}, linked {link_result['total_linked']} records")
+
+        return {
+            "success": True,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "created_at": user.created_at.isoformat() if user.created_at else None
+            },
+            "linked_activity": link_result
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in login: {e}")
+        raise HTTPException(status_code=500, detail="Login failed")
+
 
 # Health check endpoint
 @app.get("/api/health")

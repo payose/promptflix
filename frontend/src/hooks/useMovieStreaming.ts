@@ -48,6 +48,17 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
             params.set('filter', filter);
         }
 
+        // Get session_id from cookie and pass it as query param
+        // EventSource doesn't send cookies automatically, so we need to pass it manually
+        const sessionId = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('session_id='))
+            ?.split('=')[1];
+
+        if (sessionId) {
+            params.set('session_id', sessionId);
+        }
+
         const eventSource = new EventSource(
             `${baseUrl}${endpoint}?${params.toString()}`
         );

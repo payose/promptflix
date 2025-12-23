@@ -2,6 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import type { Movie } from '@/types/movie';
 import { Link } from 'react-router-dom'
 import { Star } from 'lucide-react';
+import { trackMovieClick } from '@/utils/tracking';
 
 interface PartialMovie {
     title: string;
@@ -25,6 +26,13 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeav
 
     const isLoading = !isFullMovie(movie);
     const fullMovie = isFullMovie(movie) ? movie : null;
+
+    // Track click when user clicks on movie
+    const handleClick = () => {
+        if (fullMovie) {
+            trackMovieClick(fullMovie.id, fullMovie.title);
+        }
+    };
 
     const moviePageProp = fullMovie ? {
         movie: fullMovie,
@@ -99,7 +107,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeav
     return (
         <>
             {isLoading ? cardContent : (
-                <Link to={`/movies/${fullMovie!.id}`} state={moviePageProp}>
+                <Link to={`/movies/${fullMovie!.id}`} state={moviePageProp} onClick={handleClick}>
                     {cardContent}
                 </Link>
             )}
