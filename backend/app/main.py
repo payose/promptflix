@@ -300,6 +300,7 @@ def fetch_movie_details(movie_item: MovieListItem, content_filter: Optional[str]
 @app.get("/api/movies/search")
 def search_movies_with_ai(
     query: str = Query(..., description="Search query for movie recommendations"),
+    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama"),
     session_id: str = Depends(get_session_id),  # Get session_id from cookie
     user_id: Optional[int] = Depends(get_user_id),  # Get user_id if logged in
     db: Session = Depends(get_db)  # Get database session
@@ -312,6 +313,9 @@ def search_movies_with_ai(
     - user_id: If user is logged in, links search to their account
     - db: Database session to save search history
     """
+
+    # Create cache key that includes filter
+    cache_key = f"{query}_{filter or 'all'}"
 
     # Check cache first
     if cache_key in search_cache:
@@ -337,9 +341,6 @@ def search_movies_with_ai(
         # Cache the results with filter-specific key
         search_cache[cache_key] = detailed_movies
 
-<<<<<<< HEAD
-        logger.info(f"Successfully fetched details for {len(detailed_movies)} items")
-=======
         # Step 3: Save search to database for tracking
         # Why: Track what users search for, even when anonymous
         search_record = SearchHistory(
@@ -352,8 +353,7 @@ def search_movies_with_ai(
         db.commit()
         logger.info(f"Saved search to database: session_id={session_id}, user_id={user_id}")
 
-        logger.info(f"Successfully fetched details for {len(detailed_movies)} movies")
->>>>>>> ad37bb5 (initial db config)
+        logger.info(f"Successfully fetched details for {len(detailed_movies)} items")
         return {
             "query": query,
             "movies": detailed_movies,
@@ -369,9 +369,16 @@ def search_movies_with_ai(
 @app.get("/api/movies/search/stream")
 async def stream_movie_search(
     query: str = Query(..., description="Search query for movie recommendations"),
-    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama")
+    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama"),
+    session_id: Optional[str] = Query(None, description="Session ID from cookie (for EventSource compatibility)"),
+    user_id: Optional[int] = Depends(get_user_id),
+    db: Session = Depends(get_db),
+    session_id_from_cookie: str = Depends(get_session_id)
 ):
     """Stream movie search data - first titles, then progressive TMDB details"""
+
+    # Use session_id from query param if provided (EventSource), otherwise use cookie
+    actual_session_id = session_id or session_id_from_cookie
 
     async def event_generator():
         try:
@@ -381,6 +388,22 @@ async def stream_movie_search(
             # Check cache first - if cached, send all at once
             if cache_key in search_cache:
                 logger.info(f"Returning cached results for search query: {query} (filter: {filter})")
+
+                # Save cached search to database too
+                try:
+                    search_record = SearchHistory(
+                        session_id=actual_session_id,
+                        user_id=user_id,
+                        query=query,
+                        results_count=len(search_cache[cache_key])
+                    )
+                    db.add(search_record)
+                    db.commit()
+                    logger.info(f"Saved cached search to database: session_id={actual_session_id}, user_id={user_id}")
+                except Exception as db_error:
+                    logger.error(f"Failed to save cached search to database: {db_error}")
+                    db.rollback()
+
                 yield f"data: {json.dumps({'type': 'complete', 'query': query, 'movies': search_cache[cache_key]})}\n\n"
                 return
 
@@ -405,6 +428,21 @@ async def stream_movie_search(
 
             # Cache the complete results with filter-specific key
             search_cache[cache_key] = detailed_movies
+
+            # Save search to database for tracking
+            try:
+                search_record = SearchHistory(
+                    session_id=actual_session_id,
+                    user_id=user_id,
+                    query=query,
+                    results_count=len(detailed_movies)
+                )
+                db.add(search_record)
+                db.commit()
+                logger.info(f"Saved search to database: session_id={actual_session_id}, user_id={user_id}")
+            except Exception as db_error:
+                logger.error(f"Failed to save search to database: {db_error}")
+                db.rollback()
 
             # Send completion signal
             yield f"data: {json.dumps({'type': 'done', 'query': query, 'total': len(detailed_movies)})}\n\n"

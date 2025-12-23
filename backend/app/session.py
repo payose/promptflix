@@ -38,7 +38,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
                 key="session_id",
                 value=session_id,
                 max_age=60 * 60 * 24 * 365,  # 1 year
-                httponly=True,  # Can't be accessed by JavaScript (security)
+                httponly=False,  # Allow JavaScript to read (needed for EventSource)
                 samesite="lax",  # CSRF protection
                 secure=False  # Set to True in production with HTTPS
             )
