@@ -30,7 +30,9 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeav
     // Track click when user clicks on movie
     const handleClick = () => {
         if (fullMovie) {
-            trackMovieClick(fullMovie.id, fullMovie.title);
+            // Ensure id is a number (TMDB IDs are always numbers)
+            const movieId = typeof fullMovie.id === 'string' ? parseInt(fullMovie.id, 10) : fullMovie.id;
+            trackMovieClick(movieId, fullMovie.title);
         }
     };
 
