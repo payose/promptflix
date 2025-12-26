@@ -5,17 +5,22 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install dependencies
-COPY ./app/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy app files
-COPY ./app .
+COPY ./app ./app
 
-# Copy environment file if it exists
-COPY ./.env* ./
+# Copy alembic files for migrations
+COPY ./alembic ./alembic
+COPY ./alembic.ini .
+
+# Copy start script
+COPY ./start.sh .
+RUN chmod +x start.sh
 
 # Expose FastAPI default port
 EXPOSE 8000
 
-# Start FastAPI with uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Run migrations and start server
+CMD ["./start.sh"]
