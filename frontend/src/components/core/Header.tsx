@@ -39,7 +39,7 @@ export default function Header({ hideSearchBox = false }: HeaderProps) {
           className="whitespace-nowrap flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-amber-500/50 rounded"
           aria-label="FindsMovies home"
         >
-          <h1 className="inline text-xl sm:text-2xl font-light tracking-wide text-white">
+          <h1 className="inline text-xl sm:text-2xl font-semibold tracking-wide text-white">
             finds<span className="text-amber-500">movies</span>
           </h1>
         </a>
