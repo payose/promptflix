@@ -159,7 +159,7 @@ const MoviePage: React.FC = () => {
                 <>
                     <SEO
                         title={`${details.title} (${new Date(details.release_date).getFullYear()})`}
-                        description={details.overview || `Watch ${details.title} and discover similar movies on PromptFlix.`}
+                        description={details.overview || `Watch ${details.title} and discover similar movies on FindsMovies.`}
                         image={`http://image.tmdb.org/t/p/w500/${details.backdrop_path}`}
                         url={`/movies/${details.id}`}
                         type="video.movie"

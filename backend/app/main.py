@@ -26,8 +26,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="PromptFlix API",
-    description="Backend API for PromptFlix",
+    title="FindsMovies API",
+    description="Backend API for FindsMovies",
     version="1.0.0"
 )
 
@@ -871,7 +871,7 @@ def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "message": "PromptFlix API is running",
+        "message": "FindsMovies API is running",
         "tmdb_configured": bool(TMDB_API_KEY),
         "openai_configured": bool(OPENAI_API_KEY),
         "search_cache_size": len(search_cache),
@@ -883,7 +883,7 @@ def health_check():
 def root():
     """Root endpoint with API information"""
     return {
-        "message": "PromptFlix API",
+        "message": "FindsMovies API",
         "version": "1.0.0",
         "docs": "/docs",
         "health": "/api/health",

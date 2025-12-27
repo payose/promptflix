@@ -37,9 +37,9 @@ export default function Header({ hideSearchBox = false }: HeaderProps) {
         <a
           href="/"
           className="bg-clip-text bg-gradient-to-r from-purple-400 via-purple-500 to-pink-500 whitespace-nowrap flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 focus:ring-offset-gray-900 rounded"
-          aria-label="PromptFlix home"
+          aria-label="FindsMovies home"
         >
-          <h1 className="inline text-xl sm:text-2xl font-bold text-transparent">PromptFlix</h1>
+          <h1 className="inline text-xl sm:text-2xl font-bold text-transparent">FindsMovies</h1>
         </a>
 
         {/* Search (conditionally visible) */}

@@ -1,11 +1,11 @@
-# PromptFlix
+# FindsMovies
 > **AI-powered movie discovery using natural language search**
 
-🔗 **Live Platform:** [promptflix.com](https://promptflix-frontend.onrender.com/)
+🔗 **Live Platform:** [findsmovies.com](https://promptflix-frontend.onrender.com/)
 
 ## 🎯 What It Does
 
-PromptFlix helps you find the perfect movie by simply describing what you want to watch. Instead of browsing endless catalogs or filtering through genres, just tell us your mood and let AI find your next watch.
+FindsMovies helps you find the perfect movie by simply describing what you want to watch. Instead of browsing endless catalogs or filtering through genres, just tell us your mood and let AI find your next watch.
 
 **Example queries:**
 - "I want a mind-bending thriller that makes me question reality"
@@ -20,7 +20,7 @@ PromptFlix helps you find the perfect movie by simply describing what you want t
 
 ## 🚀 The Problem It Solves
 
-Traditional movie platforms make you browse through thousands of titles or rely on rigid genre filters. PromptFlix solves this by understanding natural language descriptions of what you want to watch, saving you time and decision fatigue. Describe your mood, preferences, or the type of experience you're looking for, and get instant, AI-curated recommendations.
+Traditional movie platforms make you browse through thousands of titles or rely on rigid genre filters. FindsMovies solves this by understanding natural language descriptions of what you want to watch, saving you time and decision fatigue. Describe your mood, preferences, or the type of experience you're looking for, and get instant, AI-curated recommendations.
 
 ## 🛠️ Tech Stack
 
@@ -135,7 +135,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Live Platform
 
-Visit [PromptFlix](https://promptflix-frontend.onrender.com/) to experience AI-powered movie discovery today!
+Visit [FindsMovies](https://promptflix-frontend.onrender.com/) to experience AI-powered movie discovery today!
 
 ---
 
