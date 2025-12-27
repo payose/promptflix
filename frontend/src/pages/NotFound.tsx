@@ -11,13 +11,13 @@ function NotFound() {
                 Skip to main content
             </a>
 
-            <div className="w-screen bg-gradient-to-b from-gray-900 to-gray-800 p-6 text-gray-400">
+            <div className="w-screen bg-black p-6 text-zinc-400">
                 <main id="main-content" className="flex flex-col items-center justify-center min-h-screen" role="main">
-                    <h1 className="text-4xl font-bold mb-4">404 - Page Not Found</h1>
+                    <h1 className="text-4xl font-bold mb-4 text-white">404 - Page Not Found</h1>
                     <p className="mb-6">The page you're looking for doesn't exist.</p>
                     <Link
                         to="/"
-                        className="bg-cyan-600 text-gray-200 px-4 py-2 rounded hover:bg-cyan-700 hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                        className="bg-amber-500 text-black px-6 py-3 rounded-lg hover:bg-amber-600 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                         aria-label="Return to homepage"
                     >
                         Return to Home

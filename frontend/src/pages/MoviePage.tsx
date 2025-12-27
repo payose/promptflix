@@ -175,10 +175,10 @@ const MoviePage: React.FC = () => {
                         Skip to main content
                     </a>
 
-                    <div className="fixed inset-0 z-50 bg-gray-900 overflow-y-auto">
+                    <div className="fixed inset-0 z-50 bg-black overflow-y-auto">
                         <Header />
 
-                        <main id="main-content" className="mt-20 container mx-auto p-6">
+                        <main id="main-content" className="mt-20 container mx-auto p-6 bg-black">
                   
                         <PreviousPage />
 
