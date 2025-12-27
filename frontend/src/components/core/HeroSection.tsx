@@ -1,49 +1,26 @@
-import { Film } from 'lucide-react';
 import SearchBox from '@/components/core/SearchBox';
 import SuggestionButtons from '@/components/core/SuggestionButtons';
 
 export default function HeroSection() {
-
     return (
-        <div className="relative w-full overflow-hidden">
-            {/* Decorative background elements - hidden from screen readers */}
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-pink-900/20 to-amber-900/15 animate-pulse" aria-hidden="true" />
-
-            {/* Grid pattern overlay - tech feel */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#8b5cf620_1px,transparent_1px),linear-gradient(to_bottom,#8b5cf620_1px,transparent_1px)] bg-[size:14px_24px]" aria-hidden="true" />
-
-            {/* Glow effects - Pink, Purple, Amber */}
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" aria-hidden="true" />
-            <div className="absolute top-1/3 right-1/3 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse delay-700" aria-hidden="true" />
-            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse delay-1000" aria-hidden="true" />
-
-            <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 lg:pb-40">
-                {/* Main heading - using h2 since h1 is in Header */}
-                <h2 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-center mb-6 leading-tight">
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-amber-400">
-                        Discover the Perfect Movie
-                    </span>
-                    <br />
-                    <span className="text-gray-200">
-                        for Your Mood
-                    </span>
+        <div className="w-full bg-neutral-950">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+                {/* Main heading */}
+                <h2 className="text-4xl sm:text-5xl lg:text-6xl font-light text-center mb-12 text-white tracking-tight">
+                    Find your next movie
                 </h2>
 
                 {/* Search Box */}
-                <div className="max-w-3xl mx-auto mb-8">
+                <div className="max-w-2xl mx-auto mb-10">
                     <SearchBox />
                 </div>
 
                 {/* Prompt suggestions */}
-                <div className="space-y-4">
-                    <div className="flex items-center justify-center gap-2 mb-4">
-                        <Film className="w-5 h-5 text-amber-500" aria-hidden="true" />
-                        <p className="text-sm font-medium text-gray-300">Try these prompts:</p>
-                    </div>
-
-                    <div className="mb-14">
-                        <SuggestionButtons />
-                    </div>
+                <div className="max-w-2xl mx-auto">
+                    <p className="text-sm text-gray-500 text-center mb-4">
+                        Try asking:
+                    </p>
+                    <SuggestionButtons />
                 </div>
             </div>
         </div>
