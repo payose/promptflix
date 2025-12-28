@@ -3,6 +3,7 @@ import HomePage from './pages/HomePage';
 import MoviePage from './pages/MoviePage';
 import SearchResultsPage from './pages/SearchResults';
 import NotFound from './pages/NotFound';
+import { Toaster } from './components/ui/sonner';
 
 const App = () => {
     return (
@@ -15,6 +16,7 @@ const App = () => {
                     <Route path='/*' element={<NotFound />}></Route>
                 </Routes>
             </Router>
+            <Toaster richColors position="top-center" />
         </div>
     );
 };
