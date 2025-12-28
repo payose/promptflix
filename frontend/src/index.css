@@ -14,16 +14,21 @@
 }
 
 /* ... */
+html {
+  background-color: #000000;
+}
+
 #root {
   margin: 0 auto;
-  background-color: #0f111a;
+  background-color: #000000;
   width: 100%;
+  min-height: 100vh;
 
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  
-  color-scheme: light dark;
+
+  color-scheme: dark;
   color: rgba(255, 255, 255, 0.87);
 
   font-synthesis: none;
@@ -53,6 +58,8 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-color: #000000;
+  overflow-x: hidden;
 }
 
 
@@ -64,11 +71,11 @@ h1 {
 
 @media (prefers-color-scheme: light) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    color: rgba(255, 255, 255, 0.87);
+    background-color: #000000;
   }
   a:hover {
-    color: #747bff;
+    color: #f59e0b;
   }
 }
 
@@ -133,7 +140,11 @@ h1 {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background-color: #000000 !important;
+  }
+  html {
+    background-color: #000000 !important;
   }
 }
 

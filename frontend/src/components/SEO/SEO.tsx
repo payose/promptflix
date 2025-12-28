@@ -11,7 +11,7 @@ interface SEOProps {
 }
 
 const SEO: React.FC<SEOProps> = ({
-    title = 'PromptFlix - Discover Movies with AI',
+    title = 'FindsMovies - Discover Movies with AI',
     description = 'Discover your next favorite movie with AI-powered recommendations. Search for movies using natural language and get personalized suggestions instantly.',
     keywords = 'movies, AI recommendations, movie discovery, film search, movie suggestions, ChatGPT movies, AI movie finder',
     image = '/og-image.png',
@@ -22,7 +22,7 @@ const SEO: React.FC<SEOProps> = ({
     const siteUrl = import.meta.env.VITE_SITE_URL || 'https://promptflix.com';
     const fullUrl = url ? `${siteUrl}${url}` : siteUrl;
     const fullImageUrl = image.startsWith('http') ? image : `${siteUrl}${image}`;
-    const fullTitle = title.includes('PromptFlix') ? title : `${title} | PromptFlix`;
+    const fullTitle = title.includes('FindsMovies') ? title : `${title} | FindsMovies`;
 
     return (
         <Helmet>
@@ -41,7 +41,7 @@ const SEO: React.FC<SEOProps> = ({
             <meta property="og:title" content={fullTitle} />
             <meta property="og:description" content={description} />
             <meta property="og:image" content={fullImageUrl} />
-            <meta property="og:site_name" content="PromptFlix" />
+            <meta property="og:site_name" content="FindsMovies" />
 
             {/* Twitter */}
             <meta name="twitter:card" content="summary_large_image" />
@@ -54,7 +54,7 @@ const SEO: React.FC<SEOProps> = ({
             <meta name="robots" content="index, follow" />
             <meta name="language" content="English" />
             <meta name="revisit-after" content="7 days" />
-            <meta name="author" content="PromptFlix" />
+            <meta name="author" content="FindsMovies" />
 
             {/* Structured Data */}
             {structuredData && (

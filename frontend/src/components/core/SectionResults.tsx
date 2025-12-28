@@ -140,20 +140,25 @@ export default function SectionResults() {
     return (
         <div className="mt-8 mb-10 xl:mb-30 min-h-screen">
             {(sectionLoading || initialLoading) && Object.keys(partialSections).length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-32">
-                    {/* Animated loading spinner with gradient */}
-                    <div className="relative">
-                        <div className="w-16 h-16 border-4 border-gray-700 rounded-full"></div>
-                        <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-pink-500 border-r-purple-500 rounded-full animate-spin"></div>
-                    </div>
-                    <div className="mt-6 text-center">
-                        <p className="text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
-                            Finding the perfect movies for you
-                        </p>
-                        <p className="text-sm text-gray-500 mt-2">
-                            Curating personalized recommendations...
-                        </p>
-                    </div>
+                <div className="space-y-12">
+                    {/* Skeleton sections */}
+                    {sectionQueries.map((query, sectionIndex) => (
+                        <div key={sectionIndex} className="lg:pl-10">
+                            <div className="px-4 md:px-8">
+                                {/* Section title skeleton */}
+                                <div className="h-7 bg-zinc-800 rounded w-64 mb-6 animate-pulse" />
+
+                                {/* Horizontal movie skeletons */}
+                                <div className="flex gap-3 md:gap-4 overflow-hidden">
+                                    {Array.from({ length: 7 }).map((_, index) => (
+                                        <div key={index} className="flex-none w-32 md:w-44 animate-pulse">
+                                            <div className="aspect-[2/3] bg-zinc-800 rounded-md" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             ) : (
                 <div className="space-y-4">

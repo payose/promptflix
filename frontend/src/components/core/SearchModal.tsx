@@ -87,23 +87,17 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
             />
 
             {/* Modal Content */}
-            <div className="relative w-full max-w-3xl bg-gray-900/95 rounded-2xl shadow-2xl border border-purple-500/30 overflow-hidden animate-in zoom-in-95 duration-200">
-                {/* Gradient border effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-amber-500/20 blur-xl" aria-hidden="true" />
-
-                <div className="relative bg-gray-900/95 rounded-2xl">
+            <div className="relative w-full max-w-3xl bg-zinc-900/95 rounded-xl shadow-2xl border border-zinc-800 overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="relative bg-zinc-900/95 rounded-xl">
                     {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-purple-500/20">
-                        <div className="flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-amber-500" aria-hidden="true" />
-                            <h2 id="search-modal-title" className="text-xl font-semibold text-gray-100">
-                                What are you in the mood to watch?
-                            </h2>
-                        </div>
+                    <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+                        <h2 id="search-modal-title" className="text-xl font-light text-white">
+                            What are you in the mood to watch?
+                        </h2>
                         <button
                             onClick={onClose}
                             aria-label="Close search dialog"
-                            className="p-2 rounded-full hover:bg-gray-800 transition-colors text-gray-400 hover:text-gray-200"
+                            className="p-2 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-zinc-200"
                         >
                             <X className="w-5 h-5" aria-hidden="true" />
                         </button>
@@ -124,7 +118,7 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
                                 maxLength={250}
                                 placeholder="Describe your perfect movie in detail... e.g., 'A mind-bending thriller that makes me question reality, with complex characters and stunning cinematography'"
                                 aria-describedby="search-validation-message search-character-count"
-                                className="w-full h-32 px-4 py-3 bg-gray-800/50 border border-purple-500/30 rounded-xl text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500/50 resize-none transition-all"
+                                className="w-full h-32 px-4 py-3 bg-zinc-950/50 border border-zinc-800 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 resize-none transition-all"
                                 autoFocus
                             />
                             <div className="flex items-center justify-between text-xs">
@@ -158,9 +152,9 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
 
                         {/* Content Type Filters */}
                         <fieldset className="space-y-3">
-                            <legend className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                            <legend className="text-sm font-medium text-zinc-400 flex items-center gap-2">
                                 <Film className="w-4 h-4" aria-hidden="true" />
-                                Content Type <span className="text-gray-600 font-normal">(Optional)</span>
+                                Content Type <span className="text-zinc-600 font-normal">(Optional)</span>
                             </legend>
                             <div className="flex flex-wrap gap-2" role="group" aria-label="Content type filters">
                                 {filters.map((filter) => {
@@ -172,18 +166,14 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
                                             onClick={() => setSelectedFilter(filter.value)}
                                             aria-pressed={isSelected}
                                             aria-label={`Filter by ${filter.label}`}
-                                            className={`group relative overflow-hidden flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 ${
                                                 isSelected
-                                                    ? 'bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-amber-500/20 border-2 border-pink-500/60'
-                                                    : 'bg-gray-800/50 hover:bg-gray-800 border border-purple-500/20 hover:border-pink-500/40'
+                                                    ? 'bg-amber-500/20 border border-amber-500/50 text-white'
+                                                    : 'bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700 hover:border-amber-500/30 text-zinc-400 hover:text-white'
                                             }`}
                                         >
-                                            <Icon className={`w-4 h-4 transition-colors ${
-                                                isSelected ? 'text-amber-400' : 'text-gray-400 group-hover:text-amber-400'
-                                            }`} aria-hidden="true" />
-                                            <span className={`text-sm transition-colors ${
-                                                isSelected ? 'text-white font-medium' : 'text-gray-300 group-hover:text-white'
-                                            }`}>
+                                            <Icon className={`w-4 h-4 ${isSelected ? 'text-amber-500' : ''}`} aria-hidden="true" />
+                                            <span className="text-sm">
                                                 {filter.label}
                                             </span>
                                         </button>
@@ -194,17 +184,17 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
                     </div>
 
                     {/* Footer */}
-                    <div className="flex items-center justify-between gap-3 p-6 border-t border-purple-500/20 bg-gray-800/30">
+                    <div className="flex items-center justify-between gap-3 p-6 border-t border-zinc-800 bg-zinc-900/50">
                         <button
                             onClick={onClose}
-                            className="px-6 py-2.5 rounded-lg border border-gray-700 hover:border-gray-600 text-gray-300 hover:text-white transition-all"
+                            className="px-6 py-2.5 rounded-lg border border-zinc-700 hover:border-zinc-600 text-zinc-300 hover:text-white transition-all"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleSearch}
                             disabled={!canSubmit}
-                            className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 hover:from-purple-600 hover:via-pink-600 hover:to-amber-600 text-white font-medium shadow-lg shadow-pink-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            className="px-6 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-black font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
                             Search Movies
                         </button>

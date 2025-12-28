@@ -6,7 +6,6 @@ import MovieCard from '@/components/core/movieCard';
 import Header from '@/components/core/Header';
 import SEO from '@/components/SEO/SEO';
 import PreviousPage from '@/components/ui/previousPage';
-import { Loader2 } from 'lucide-react';
 import { useMovieStreaming } from '@/hooks/useMovieStreaming';
 
 export default function SearchResultsPage() {
@@ -55,7 +54,7 @@ export default function SearchResultsPage() {
             {/* Skip to main content link for keyboard users */}
             <a
                 href="#main-content"
-                className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-purple-600 focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-amber-500 focus:text-black focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-500/50"
             >
                 Skip to main content
             </a>
@@ -76,15 +75,15 @@ export default function SearchResultsPage() {
                         )}
 
                         {(loading || isStreaming) && movies.length === 0 && (
-                            <div
-                                className="flex flex-col items-center justify-center py-20"
-                                role="status"
-                                aria-live="polite"
-                                aria-label="Loading search results"
-                            >
-                                <Loader2 className="h-12 w-12 text-pink-500 animate-spin mb-4" aria-hidden="true" />
-                                <span className="text-gray-400">Finding movies for you...</span>
-                            </div>
+                            <section aria-label="Loading search results" role="status" aria-live="polite">
+                                <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
+                                    {Array.from({ length: 10 }).map((_, index) => (
+                                        <div key={`skeleton-${index}`} className="animate-pulse">
+                                            <div className="aspect-[2/3] bg-zinc-800 rounded-md" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
                         )}
 
                         {error && (

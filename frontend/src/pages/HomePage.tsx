@@ -38,7 +38,7 @@ const HomePage = () => {
     const structuredData = {
         "@context": "https://schema.org",
         "@type": "WebSite",
-        "name": "PromptFlix",
+        "name": "FindsMovies",
         "description": "Discover movies with AI-powered recommendations",
         "url": "https://promptflix.com",
         "potentialAction": {
@@ -54,7 +54,7 @@ const HomePage = () => {
     return (
         <>
             <SEO
-                title="PromptFlix - Discover Movies with AI"
+                title="FindsMovies - Discover Movies with AI"
                 description="Discover your next watch with AI-powered recommendations. Search for movies using natural language and get personalized suggestions instantly."
                 url="/"
                 structuredData={structuredData}
@@ -68,11 +68,11 @@ const HomePage = () => {
                 Skip to main content
             </a>
 
-            <div className="min-h-screen w-screen relative">
+            <div className="min-h-screen w-screen relative bg-black">
                 <Header hideSearchBox={isHeroVisible} />
 
                 {/* Main content area */}
-                <main id="main-content" className="mt-20">
+                <main id="main-content" className="mt-20 bg-black">
                     {/* Hero Section */}
                     <section
                         ref={heroRef}

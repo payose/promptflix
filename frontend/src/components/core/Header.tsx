@@ -22,10 +22,10 @@ export default function Header({ hideSearchBox = false }: HeaderProps) {
     <header
         role="banner"
         className={`
-            fixed top-0 w-full z-50 transition-all backdrop-blur-lg
+            fixed top-0 w-full z-50 transition-all
             ${scrolled
-              ? 'bg-gray-900/95 border-b border-pink-500/30 shadow-lg shadow-pink-500/10'
-              : 'bg-gray-900/70 border-b border-purple-500/20'
+              ? 'bg-black/80 backdrop-blur-md border-b border-zinc-800'
+              : 'bg-transparent border-b border-zinc-900'
             }
         `}
     >
@@ -36,10 +36,12 @@ export default function Header({ hideSearchBox = false }: HeaderProps) {
         {/* Logo - clickable home link */}
         <a
           href="/"
-          className="bg-clip-text bg-gradient-to-r from-purple-400 via-purple-500 to-pink-500 whitespace-nowrap flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 focus:ring-offset-gray-900 rounded"
-          aria-label="PromptFlix home"
+          className="whitespace-nowrap flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-amber-500/50 rounded"
+          aria-label="FindsMovies home"
         >
-          <h1 className="inline text-xl sm:text-2xl font-bold text-transparent">PromptFlix</h1>
+          <h1 className="inline text-xl sm:text-2xl font-semibold tracking-wide text-white">
+            finds<span className="text-amber-500">movies</span>
+          </h1>
         </a>
 
         {/* Search (conditionally visible) */}

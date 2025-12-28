@@ -30,10 +30,9 @@ function SuggestionButtons() {
                     size="sm"
                     onClick={() => handlePromptClick(prompt)}
                     aria-label={`Search for ${prompt}`}
-                    className="group relative overflow-hidden rounded-full border-purple-500/30 bg-gray-900/50 backdrop-blur-sm text-gray-300 hover:text-white hover:border-amber-500 hover:bg-gray-900/50 transition-all duration-300"
+                    className="rounded-full border-zinc-800 bg-zinc-900/50 text-gray-300 hover:text-white hover:border-amber-500/50 hover:bg-zinc-900 transition-all duration-200"
                 >
-                    <span className="relative z-10">{prompt}</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-amber-500/0 to-cyan-500/0 group-hover:from-purple-500/10 group-hover:via-amber-500/10 group-hover:to-cyan-500/10 transition-all duration-300" aria-hidden="true" />
+                    {prompt}
                 </Button>
             ))}
         </div>

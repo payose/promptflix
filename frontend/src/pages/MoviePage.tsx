@@ -58,6 +58,7 @@ const MoviePage: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoadingReviews, setIsLoadingReviews] = useState(false);
     const [watchProviders, setWatchProviders] = useState<WatchProvidersResponse | null>(null);
+    const [isLoadingDetails, setIsLoadingDetails] = useState(true);
 
     const getYoutubeTrailer = async (title: string, mediaType?: string, releaseYear?: string) => {
         try {
@@ -126,14 +127,32 @@ const MoviePage: React.FC = () => {
         }
     }, [movie.id, movie.media_type]);
 
+    // Fetch movie details and providers in parallel
     useEffect(() => {
-        fetchMovieDetails(movie.id, movie.media_type);
-        fetchWatchProviders();
-    }, [movie, fetchMovieDetails, fetchWatchProviders]);
+        const loadInitialData = async () => {
+            setIsLoadingDetails(true);
+            try {
+                // Fetch details and providers in parallel
+                await Promise.all([
+                    fetchMovieDetails(movie.id, movie.media_type),
+                    fetchWatchProviders()
+                ]);
+            } catch (error) {
+                console.error('Error loading movie data:', error);
+            } finally {
+                setIsLoadingDetails(false);
+            }
+        };
 
+        loadInitialData();
+    }, [movie.id, movie.media_type, fetchMovieDetails, fetchWatchProviders]);
+
+    // Lazy load reviews only when needed
     useEffect(() => {
-        fetchReviews();
-    }, [fetchReviews, currentPage]);
+        if (!isLoadingDetails && details) {
+            fetchReviews();
+        }
+    }, [details, isLoadingDetails, fetchReviews, currentPage]);
 
     // Generate structured data for the movie
     const movieStructuredData = details ? {
@@ -155,43 +174,68 @@ const MoviePage: React.FC = () => {
 
     return (
         <>
-            {details && (
-                <>
-                    <SEO
-                        title={`${details.title} (${new Date(details.release_date).getFullYear()})`}
-                        description={details.overview || `Watch ${details.title} and discover similar movies on PromptFlix.`}
-                        image={`http://image.tmdb.org/t/p/w500/${details.backdrop_path}`}
-                        url={`/movies/${details.id}`}
-                        type="video.movie"
-                        keywords={`${details.title}, ${details.genres?.map(g => g.name).join(', ')}, watch movie, movie details`}
-                        {...(movieStructuredData && { structuredData: movieStructuredData })}
-                    />
+            <SEO
+                title={details ? `${details.title} (${new Date(details.release_date).getFullYear()})` : 'Loading...'}
+                description={details?.overview || `Discover ${movie.title} on FindsMovies.`}
+                image={details ? `http://image.tmdb.org/t/p/w500/${details.backdrop_path}` : undefined}
+                url={`/movies/${movie.id}`}
+                type="video.movie"
+                keywords={details ? `${details.title}, ${details.genres?.map(g => g.name).join(', ')}, watch movie, movie details` : ''}
+                {...(details && movieStructuredData && { structuredData: movieStructuredData })}
+            />
 
-                    {/* Skip to main content link for keyboard users */}
-                    <a
-                        href="#main-content"
-                        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-purple-600 focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    >
-                        Skip to main content
-                    </a>
+            {/* Skip to main content link for keyboard users */}
+            <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-amber-500 focus:text-black focus:rounded-lg focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+            >
+                Skip to main content
+            </a>
 
-                    <div className="fixed inset-0 z-50 bg-gray-900 overflow-y-auto">
-                        <Header />
+            <div className="fixed inset-0 z-50 bg-black overflow-y-auto">
+                <Header />
 
-                        <main id="main-content" className="mt-20 container mx-auto p-6">
-                  
-                        <PreviousPage />
+                <main id="main-content" className="mt-20 container mx-auto p-6 bg-black">
+                    <PreviousPage />
 
-                        {/* Movie Hero Section */}
+                    {/* Loading Skeleton */}
+                    {isLoadingDetails && (
+                        <article className="animate-pulse">
+                            <section className="grid md:grid-cols-[400px_1fr] gap-8">
+                                {/* Poster skeleton */}
+                                <div className="aspect-[2/3] bg-zinc-800 rounded-md" />
+
+                                {/* Details skeleton */}
+                                <div className="space-y-4">
+                                    <div className="h-8 bg-zinc-800 rounded w-3/4" />
+                                    <div className="flex gap-4">
+                                        <div className="h-6 bg-zinc-800 rounded w-20" />
+                                        <div className="h-6 bg-zinc-800 rounded w-20" />
+                                        <div className="h-6 bg-zinc-800 rounded w-32" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="h-4 bg-zinc-800 rounded" />
+                                        <div className="h-4 bg-zinc-800 rounded" />
+                                        <div className="h-4 bg-zinc-800 rounded w-5/6" />
+                                    </div>
+                                    <div className="h-12 bg-zinc-800 rounded w-40" />
+                                </div>
+                            </section>
+                        </article>
+                    )}
+
+                    {/* Actual Content */}
+                    {!isLoadingDetails && details && (
                         <article>
                             <section aria-label="Movie details" className="grid md:grid-cols-[400px_1fr] gap-8">
                                 {/* Poster */}
                                 <div>
                                     <img
-                                        src={imageError ? `https://images.pexels.com/photos/29890776/pexels-photo-29890776/free-photo-of-traditional-vietnamese-new-year-gift-box.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2`
+                                        src={imageError ? `https://images.pexels.com/photos/29890776/pexels-photo-29890776/free-photo-of-traditional-vietnamese-new-year-gift-box.jpeg?auto=compress&cs=tinysrgb&w=400&h=600&dpr=1`
                                             : `http://image.tmdb.org/t/p/w500/${details.backdrop_path}`}
-                                        className='rounded-md'
+                                        className='rounded-md w-full'
                                         alt={`${details.title} movie poster`}
+                                        loading="eager"
                                         onError={() => setImageError(true)}
                                     />
                                 </div>
@@ -231,7 +275,7 @@ const MoviePage: React.FC = () => {
                                             details.release_date ? new Date(details.release_date).getFullYear().toString() : undefined
                                         )}
                                         aria-label={`Watch trailer for ${details.title}`}
-                                        className="bg-amber-600 hover:bg-cyan-700 text-sm text-white px-6 py-3 rounded-lg flex items-center gap-2"
+                                        className="bg-amber-500 hover:bg-amber-600 text-sm text-black font-medium px-6 py-3 rounded-lg flex items-center gap-2 transition-colors"
                                     >
                                         <PlayCircle aria-hidden="true" /> Watch Trailer
                                     </button>
@@ -346,7 +390,7 @@ const MoviePage: React.FC = () => {
                                         <button
                                             onClick={() => setActiveTrailer(null)}
                                             aria-label="Close trailer"
-                                            className="absolute top-4 right-4 text-white text-2xl hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-500 rounded"
+                                            className="absolute top-4 right-4 text-white text-2xl hover:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-amber-500/50 rounded bg-black/50 w-10 h-10 flex items-center justify-center"
                                         >
                                             ✕
                                         </button>
@@ -361,10 +405,9 @@ const MoviePage: React.FC = () => {
                                 </div>
                             )}
                         </article>
-                        </main>
-                    </div>
-                </>
-            )}
+                    )}
+                </main>
+            </div>
         </>
     );
 };
