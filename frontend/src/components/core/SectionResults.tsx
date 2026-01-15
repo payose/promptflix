@@ -142,7 +142,7 @@ export default function SectionResults() {
             {(sectionLoading || initialLoading) && Object.keys(partialSections).length === 0 ? (
                 <div className="space-y-12">
                     {/* Skeleton sections */}
-                    {sectionQueries.map((query, sectionIndex) => (
+                    {sectionQueries.map((sectionIndex) => (
                         <div key={sectionIndex} className="lg:pl-10">
                             <div className="px-4 md:px-8">
                                 {/* Section title skeleton */}
