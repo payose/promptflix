@@ -114,10 +114,11 @@ export default function SearchResultsPage() {
                                 >
                                     {movies.map((movie, index) => {
                                         const isFullMovie = 'id' in movie && movie.id !== undefined;
-                                        const movieId = isFullMovie ? movie.id : `${movie.title}-${index}`;
+                                        // Use stable key based on index to prevent React re-mounting during streaming
+                                        const movieKey = `${query}-${index}`;
 
                                         return (
-                                            <div key={movieId} role="listitem">
+                                            <div key={movieKey} role="listitem">
                                                 <MovieCard
                                                     movie={movie}
                                                     isHovered={isFullMovie && hoveredMovieId === movie.id}
