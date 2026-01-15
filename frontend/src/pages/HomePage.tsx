@@ -86,7 +86,7 @@ const HomePage = () => {
                     <section
                         id="examples-section"
                         aria-label="Movie recommendations"
-                        className="relative -top-28 mx-auto space-y-12 mt-4"
+                        className="mx-auto space-y-12 mt-4"
                     >
                         <SectionResults />
                     </section>
