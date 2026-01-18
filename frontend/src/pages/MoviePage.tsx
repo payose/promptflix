@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PlayCircle, Star, Clock, Film, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Movie, Review } from '@/types/movie';
-import { useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import ReviewCard from "@/components/core/reviews"
 import Header from '@/components/core/Header';
 import PreviousPage from '@/components/ui/previousPage';
@@ -48,8 +48,16 @@ interface WatchProvidersResponse {
 }
 
 const MoviePage: React.FC = () => {
-    const { state } = useLocation();
-    const movie = state.movie;
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+    const searchParams = new URLSearchParams(window.location.search);
+    const mediaType = searchParams.get('media_type') || 'movie';
+
+    const movieId = Number(id);
+    const movie = {
+        id: movieId,
+        media_type: mediaType,
+    } as Movie;
 
     const [imageError, setImageError] = useState(false);
     const [details, setDetails] = useState<MovieDetails | null>(null);
@@ -132,6 +140,13 @@ const MoviePage: React.FC = () => {
         const loadInitialData = async () => {
             setIsLoadingDetails(true);
             try {
+                // Validate movie ID
+                const movieId = Number(movie.id);
+                if (!movie.id || isNaN(movieId)) {
+                    navigate('/404', { replace: true });
+                    return;
+                }
+
                 // Fetch details and providers in parallel
                 await Promise.all([
                     fetchMovieDetails(movie.id, movie.media_type),
@@ -139,13 +154,15 @@ const MoviePage: React.FC = () => {
                 ]);
             } catch (error) {
                 console.error('Error loading movie data:', error);
+                // Redirect to 404 page for any errors
+                navigate('/404', { replace: true });
             } finally {
                 setIsLoadingDetails(false);
             }
         };
 
         loadInitialData();
-    }, [movie.id, movie.media_type, fetchMovieDetails, fetchWatchProviders]);
+    }, [movie.id, movie.media_type, fetchMovieDetails, fetchWatchProviders, navigate]);
 
     // Lazy load reviews only when needed
     useEffect(() => {
@@ -193,7 +210,7 @@ const MoviePage: React.FC = () => {
             </a>
 
             <div className="fixed inset-0 z-50 bg-black overflow-y-auto">
-                <Header />
+                <Header hideSearchBox={true} />
 
                 <main id="main-content" className="mt-20 container mx-auto p-6 bg-black">
                     <PreviousPage />
@@ -248,7 +265,7 @@ const MoviePage: React.FC = () => {
                                     <div className="flex flex-wrap items-center text-sm xl:text-base gap-4 mb-4">
                                         <div className="flex items-center gap-2">
                                             <Star className="text-yellow-500" aria-hidden="true" />
-                                            <span aria-label={`Rating: ${details.vote_average} out of 10`}>{details.vote_average}/10</span>
+                                            <span aria-label={`Rating: ${details.vote_average} out of 10`}>{details.vote_average.toFixed(1)}/10</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Clock className="text-red-500" aria-hidden="true" />

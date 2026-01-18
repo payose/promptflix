@@ -97,10 +97,11 @@ const MovieSection = ({ query, movies }: MovieSectionProps) => {
                     >
                         {movies.map((movie, index) => {
                             const isFullMovie = 'id' in movie && movie.id !== undefined;
-                            const movieId = isFullMovie ? movie.id : `${movie.title}-${index}`;
+                            // Use stable key based on index to prevent React re-mounting during streaming
+                            const movieKey = `${query}-${index}`;
 
                             return (
-                                <div key={movieId} className="flex-none w-32 md:w-44">
+                                <div key={movieKey} className="flex-none w-32 md:w-44">
                                     <MovieCard
                                         movie={movie}
                                         isHovered={isFullMovie && hoveredMovie === movie.id}
