@@ -3,7 +3,7 @@ name: Deploy Findsmovies
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
