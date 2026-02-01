@@ -1,43 +1,65 @@
-version: "3.8"
-
 services:
-  db:
+  postgres:
     image: postgres:15-alpine
-    container_name: promptflix-db
-    environment:
-      POSTGRES_USER: promptflix
-      POSTGRES_PASSWORD: promptflix_dev
-      POSTGRES_DB: promptflix
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    container_name: findsmovies-db
     restart: unless-stopped
-
-  backend:
-    build: ./backend
-    container_name: promptflix-backend
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend/app:/app  # hot reload (dev)
     env_file:
       - ./backend/.env
-    environment:
-      - PYTHONPATH=/app
-      - DATABASE_URL=postgresql://promptflix:promptflix_dev@db:5432/promptflix
-    depends_on:
-      - db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - findsmovies
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: findsmovies-backend
     restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - findsmovies
 
   frontend:
-    build: ./frontend
-    container_name: promptflix-frontend
-    ports:
-      - "3000:80"
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: findsmovies-frontend
+    restart: unless-stopped
     depends_on:
       - backend
+    networks:
+      - findsmovies
+
+  nginx:
+    image: nginx:alpine
+    container_name: findsmovies-nginx
     restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf:/etc/nginx/conf.d
+      - ./nginx/certbot/www:/var/www/certbot
+      - ./nginx/certbot/conf:/etc/letsencrypt
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - findsmovies
 
 volumes:
   postgres_data:
+
+networks:
+  findsmovies:
+    driver: bridge
