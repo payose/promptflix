@@ -113,7 +113,6 @@ class LoginRequest(BaseModel):
 
 # In-memory cache for API responses
 search_cache: Dict[str, List[Dict[str, Any]]] = {}
-section_cache: Dict[str, List[Dict[str, Any]]] = {}
 
 def get_cors_headers():
     """Get CORS headers for streaming responses"""
@@ -484,110 +483,6 @@ async def stream_movie_search(
         headers=headers
     )
 
-# Section query endpoint that mirrors Redux sectionQuery
-@app.get("/api/movies/section")
-def get_movie_section_with_ai(query: str = Query(..., description="Section query for movie recommendations")) -> Dict[str, Any]:
-    """Get movie section using AI recommendations + TMDB details (mirrors sectionQuery)"""
-
-    # Check cache first
-    if query in section_cache:
-        logger.info(f"Returning cached results for section query: {query}")
-        return {
-            "query": query,
-            "movies": section_cache[query],
-            "cached": True
-        }
-
-    try:
-        # Step 1: Query OpenAI for movie recommendations
-        movie_list = query_openai_for_movies(query)
-        logger.info(f"OpenAI returned {len(movie_list)} movie recommendations for section")
-
-        # Step 2: Fetch detailed information for each movie from TMDB
-        detailed_movies = []
-        for movie_item in movie_list:
-            movie_details = fetch_movie_details(movie_item)
-            if movie_details:
-                detailed_movies.append(movie_details)
-
-        # Cache the results
-        section_cache[query] = detailed_movies
-
-        logger.info(f"Successfully fetched section details for {len(detailed_movies)} movies")
-        return {
-            "query": query,
-            "movies": detailed_movies,
-            "cached": False
-        }
-
-    except Exception as e:
-        logger.error(f"Error in get_movie_section_with_ai: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get movie section")
-
-# Streaming endpoint for progressive loading
-@app.get("/api/movies/section/stream")
-async def stream_movie_section(query: str = Query(..., description="Section query for movie recommendations")):
-    """Stream movie section data - first titles, then progressive TMDB details"""
-
-    async def event_generator():
-        try:
-            # Check cache first - if cached, send all at once
-            if query in section_cache:
-                logger.info(f"Returning cached results for section query: {query}")
-                yield f"data: {json.dumps({'type': 'complete', 'query': query, 'movies': section_cache[query]})}\n\n"
-                return
-
-            # Step 1: Query OpenAI for movie recommendations
-            try:
-                movie_list = query_openai_for_movies(query)
-                logger.info(f"OpenAI returned {len(movie_list)} movie recommendations for section")
-            except HTTPException as http_exc:
-                # Handle HTTPException from query_openai_for_movies
-                error_message = http_exc.detail
-                logger.error(f"OpenAI query failed: {error_message}")
-                yield f"data: {json.dumps({'type': 'error', 'message': error_message})}\n\n"
-                return
-
-            # Step 2: Send initial titles/years immediately
-            initial_data = [{"title": movie.title, "year": movie.year} for movie in movie_list]
-            yield f"data: {json.dumps({'type': 'initial', 'query': query, 'movies': initial_data})}\n\n"
-
-            # Step 3: Fetch and stream detailed information for each movie
-            detailed_movies = []
-            for index, movie_item in enumerate(movie_list):
-                movie_details = fetch_movie_details(movie_item)
-                if movie_details:
-                    detailed_movies.append(movie_details)
-                    # Stream each movie detail as it's fetched
-                    yield f"data: {json.dumps({'type': 'detail', 'query': query, 'index': index, 'movie': movie_details})}\n\n"
-                    # Small delay to avoid overwhelming the client
-                    await asyncio.sleep(0.05)
-
-            # Cache the complete results
-            section_cache[query] = detailed_movies
-
-            # Send completion signal
-            yield f"data: {json.dumps({'type': 'done', 'query': query, 'total': len(detailed_movies)})}\n\n"
-            logger.info(f"Successfully streamed {len(detailed_movies)} movies for section: {query}")
-
-        except Exception as e:
-            logger.error(f"Error in stream_movie_section: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
-
-    # Combine standard SSE headers with CORS headers
-    headers = {
-        "Cache-Control": "no-cache",
-        "X-Accel-Buffering": "no",
-        "Connection": "keep-alive",
-    }
-    headers.update(get_cors_headers())
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers=headers
-    )
-
 # Fetch individual movie results (mirrors fetchMoviesResults)
 @app.post("/api/movies/fetch-details")
 def fetch_movie_result(movie_item: MovieListItem) -> Dict[str, Any]:
@@ -608,24 +503,16 @@ def fetch_movie_result(movie_item: MovieListItem) -> Dict[str, Any]:
 # Cache management endpoints
 @app.delete("/api/cache/search")
 def clear_search_cache():
-    """Clear search results cache (mirrors clearSearchCache)"""
+    """Clear search results cache (includes all searches and sections)"""
     global search_cache
     search_cache = {}
     return {"message": "Search cache cleared"}
 
-@app.delete("/api/cache/section")
-def clear_section_cache():
-    """Clear section results cache (mirrors clearSectionCache)"""
-    global section_cache
-    section_cache = {}
-    return {"message": "Section cache cleared"}
-
 @app.delete("/api/cache/all")
 def clear_all_cache():
     """Clear all caches"""
-    global search_cache, section_cache
+    global search_cache
     search_cache = {}
-    section_cache = {}
     return {"message": "All caches cleared"}
 
 # Individual movie/TV details endpoint
@@ -692,29 +579,6 @@ def get_content_watch_providers(
         logger.error(f"Error getting watch providers for ID {content_id} (type: {media_type}): {e}")
         raise HTTPException(status_code=500, detail="Failed to get watch providers")
 
-# Cache management endpoints
-@app.delete("/api/cache/search")
-def clear_search_cache():
-    """Clear search results cache (mirrors clearSearchCache)"""
-    global search_cache
-    search_cache = {}
-    return {"message": "Search cache cleared"}
-
-
-@app.delete("/api/cache/section")
-def clear_section_cache():
-    """Clear section results cache (mirrors clearSectionCache)"""
-    global section_cache
-    section_cache = {}
-    return {"message": "Section cache cleared"}
-
-@app.delete("/api/cache/all")
-def clear_all_cache():
-    """Clear all caches"""
-    global search_cache, section_cache
-    search_cache = {}
-    section_cache = {}
-    return {"message": "All caches cleared"}
 
 # Direct TMDB search endpoint (for cases where you need direct TMDB search)
 @app.get("/api/tmdb/search")
@@ -899,8 +763,7 @@ def health_check():
         "message": "FindsMovies API is running",
         "tmdb_configured": bool(TMDB_API_KEY),
         "openai_configured": bool(OPENAI_API_KEY),
-        "search_cache_size": len(search_cache),
-        "section_cache_size": len(section_cache)
+        "cache_size": len(search_cache)
     }
 
 # Root endpoint
@@ -913,11 +776,11 @@ def root():
         "docs": "/docs",
         "health": "/api/health",
         "endpoints": {
-            "search": "GET /api/movies/search?query=...",
-            "section": "GET /api/movies/section?query=...",
-            "movie_details": "GET /api/movies/{movie_id}",
-            "movie_reviews": "GET /api/movies/{movie_id}/reviews",
-            "watch_providers": "GET /api/movies/{movie_id}/watch/providers",
+            "search": "GET /api/movies/search?query=...&filter=...",
+            "search_stream": "GET /api/movies/search/stream?query=...&filter=...",
+            "movie_details": "GET /api/movies/{movie_id}?media_type=...",
+            "movie_reviews": "GET /api/movies/{movie_id}/reviews?media_type=...",
+            "watch_providers": "GET /api/movies/{movie_id}/watch/providers?media_type=...",
             "fetch_details": "POST /api/movies/fetch-details",
             "direct_tmdb": "GET /api/tmdb/search?query=..."
         }

@@ -37,9 +37,8 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
 
         // Use the same base URL as the axios configuration
         const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-        const endpoint = type === 'section'
-            ? `/movies/section/stream`
-            : `/movies/search/stream`;
+        // Both section and search now use the same endpoint
+        const endpoint = `/movies/search/stream`;
 
         // Build query parameters
         const params = new URLSearchParams();
@@ -128,7 +127,7 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
                         onComplete?.();
                         break;
 
-                    case 'error':
+                    case 'error': {
                         console.error('Streaming error:', data.message);
                         // Provide user-friendly error messages
                         let userMessage = data.message || 'An error occurred while fetching movies';
@@ -146,6 +145,7 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
                         eventSource.close();
                         onError?.(userMessage);
                         break;
+                    }
                 }
             } catch (error) {
                 console.error('Error parsing SSE data:', error);
