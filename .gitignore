@@ -1,3 +1,4 @@
+
 # Logs
 logs
 *.log
@@ -37,3 +38,8 @@ dist/
 .env
 .env.*
 !.env.example
+
+nginx/certbot/conf/
+nginx/certbot/www/
+backend/.env
+
