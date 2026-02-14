@@ -74,7 +74,7 @@ export default function SearchResultsPage() {
                             </header>
                         )}
 
-                        {(loading || isStreaming) && movies.length === 0 && (
+                        {(loading || isStreaming ) && !error && movies.length === 0 && (
                             <section aria-label="Loading search results" role="status" aria-live="polite">
                                 <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
                                     {Array.from({ length: 10 }).map((_, index) => (
@@ -95,17 +95,6 @@ export default function SearchResultsPage() {
                                 <p className="text-red-400">Error: {error}</p>
                             </div>
                         )}
-
-                        {!loading && !isStreaming && movies.length === 0 && query && (
-                            <div
-                                className="text-center py-20"
-                                role="status"
-                                aria-live="polite"
-                            >
-                                <p className="text-gray-400">No movies found for your search.</p>
-                            </div>
-                        )}
-
                         {movies.length > 0 && (
                             <section aria-label={`Search results for ${query}`}>
                                 <div
