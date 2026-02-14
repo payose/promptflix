@@ -40,12 +40,12 @@ const HomePage = () => {
         "@type": "WebSite",
         "name": "FindsMovies",
         "description": "Discover movies with AI-powered recommendations",
-        "url": "https://promptflix.com",
+        "url": "https://findsmovies.com",
         "potentialAction": {
             "@type": "SearchAction",
             "target": {
                 "@type": "EntryPoint",
-                "urlTemplate": "https://promptflix.com/search?q={search_term_string}"
+                "urlTemplate": "https://findsmovies.com"
             },
             "query-input": "required name=search_term_string"
         }
@@ -55,7 +55,7 @@ const HomePage = () => {
         <>
             <SEO
                 title="FindsMovies - Discover Movies with AI"
-                description="Discover your next watch with AI-powered recommendations. Search for movies using natural language and get personalized suggestions instantly."
+                description="Discover your next watch with AI-powered recommendations. Describe the movie you want, and get suggestions instantly."
                 url="/"
                 structuredData={structuredData}
             />
