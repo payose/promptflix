@@ -1,7 +1,7 @@
 # FindsMovies
 > **AI-powered movie discovery using natural language search**
 
-🔗 **Live Platform:** [findsmovies.com](https://promptflix-frontend.onrender.com/)
+🔗 **Live Platform:** [findsmovies.com](https://findsmovies.com/)
 
 ## 🎯 What It Does
 
@@ -135,7 +135,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Live Platform
 
-Visit [FindsMovies](https://promptflix-frontend.onrender.com/) to experience AI-powered movie discovery today!
+Visit [FindsMovies](https://findsmovies.com/) to experience AI-powered movie discovery today!
 
 ---
 
