@@ -119,7 +119,7 @@ const MovieSection = ({ query, movies }: MovieSectionProps) => {
 };
 
 export default function SectionResults() {
-    const { partialSections, sectionLoading } = useSelector((state: RootState) => state.movies);
+    const { partialSections, sectionLoading, sectionError } = useSelector((state: RootState) => state.movies);
     const { streamMovies } = useMovieStreaming({ type: 'section' });
     const [initialLoading, setInitialLoading] = useState(true);
 
@@ -140,7 +140,17 @@ export default function SectionResults() {
 
     return (
         <div className="mt-8 mb-10 xl:mb-30 min-h-screen">
-            {(sectionLoading || initialLoading) && Object.keys(partialSections).length === 0 ? (
+            {sectionError && (
+                <div
+                    className="text-center py-10 px-4"
+                    role="alert"
+                    aria-live="assertive"
+                >
+                    <p className="text-red-400 text-sm md:text-base">{sectionError}</p>
+                </div>
+            )}
+
+            {(sectionLoading || initialLoading) && Object.keys(partialSections).length === 0 && !sectionError ? (
                 <div className="space-y-12">
                     {/* Skeleton sections */}
                     {sectionQueries.map((sectionIndex) => (

@@ -63,7 +63,8 @@ export const queryMovies = createAsyncThunk(
 
 /**
  * Fetch movie section results (e.g. "Top Sci-Fi")
- * - Calls FastAPI endpoint: GET /movies/section?query=xyz
+ * - Calls FastAPI endpoint: GET /movies/search?query=xyz
+ * - Note: Sections now use the same unified search endpoint
  */
 export const sectionQuery = createAsyncThunk(
   "movies/sectionQuery",
@@ -76,7 +77,7 @@ export const sectionQuery = createAsyncThunk(
     }
 
     try {
-      const response = await APIService.getInstance("backend").get(`/movies/section`, {
+      const response = await APIService.getInstance("backend").get(`/movies/search`, {
         params: { query },
       });
       return { query, movies: response.data.movies as Movie[] };
