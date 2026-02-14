@@ -130,38 +130,46 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
 
                     case 'error':
                         console.error('Streaming error:', data.message);
+                        // Provide user-friendly error messages
+                        let userMessage = data.message || 'An error occurred while fetching movies';
+
+                        // Check for specific error types
+                        if (data.message?.toLowerCase().includes('rate limit')) {
+                            userMessage = 'We\'re experiencing high demand. Please try again in a few moments.';
+                        }
+
                         if (type === 'section') {
-                            dispatch(sectionStreamError({ query: data.query, error: data.message }));
+                            dispatch(sectionStreamError({ query: data.query || query, error: userMessage }));
                         } else {
-                            dispatch(searchStreamError({ query: data.query, error: data.message }));
+                            dispatch(searchStreamError({ query: data.query || query, error: userMessage }));
                         }
                         eventSource.close();
-                        onError?.(data.message);
+                        onError?.(userMessage);
                         break;
                 }
             } catch (error) {
                 console.error('Error parsing SSE data:', error);
-                const errorMessage = String(error);
+                const userMessage = 'An error occurred while processing movie data. Please try again.';
                 if (type === 'section') {
-                    dispatch(sectionStreamError({ query, error: errorMessage }));
+                    dispatch(sectionStreamError({ query, error: userMessage }));
                 } else {
-                    dispatch(searchStreamError({ query, error: errorMessage }));
+                    dispatch(searchStreamError({ query, error: userMessage }));
                 }
                 eventSource.close();
-                onError?.(errorMessage);
+                onError?.(userMessage);
             }
         };
 
         eventSource.onerror = (error) => {
             console.error('EventSource error:', error);
-            const errorMessage = 'Connection error';
+            const userMessage = 'Connection error. Please check your internet connection and try again.';
             if (type === 'section') {
-                dispatch(sectionStreamError({ query, error: errorMessage }));
+                dispatch(sectionStreamError({ query, error: userMessage }));
             } else {
-                dispatch(searchStreamError({ query, error: errorMessage }));
+                dispatch(searchStreamError({ query, error: userMessage }));
             }
             eventSource.close();
-            onError?.(errorMessage);
+            onError?.(userMessage);
         };
 
         return eventSource;

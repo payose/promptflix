@@ -263,6 +263,17 @@ def query_openai_for_movies(prompt: str, content_filter: Optional[str] = None) -
             logger.error(f"Failed to parse OpenAI response: {e}")
             raise HTTPException(status_code=500, detail="Failed to parse AI movie recommendations")
             
+    except requests.exceptions.HTTPError as e:
+        # Check specifically for rate limit errors (429)
+        if hasattr(e, 'response') and e.response is not None and e.response.status_code == 429:
+            logger.error(f"OpenAI rate limit exceeded: {e}")
+            raise HTTPException(
+                status_code=429,
+                detail="OpenAI rate limit exceeded. Please try again in a few moments."
+            )
+        else:
+            logger.error(f"OpenAI HTTP error: {e}")
+            raise HTTPException(status_code=500, detail=f"OpenAI request failed: {str(e)}")
     except requests.exceptions.RequestException as e:
         logger.error(f"OpenAI request failed: {e}")
         raise HTTPException(status_code=500, detail=f"OpenAI request failed: {str(e)}")
@@ -408,8 +419,15 @@ async def stream_movie_search(
                 return
 
             # Step 1: Query OpenAI for movie/TV recommendations with filter
-            movie_list = query_openai_for_movies(query, filter)
-            logger.info(f"OpenAI returned {len(movie_list)} recommendations for search (filter: {filter})")
+            try:
+                movie_list = query_openai_for_movies(query, filter)
+                logger.info(f"OpenAI returned {len(movie_list)} recommendations for search (filter: {filter})")
+            except HTTPException as http_exc:
+                # Handle HTTPException from query_openai_for_movies
+                error_message = http_exc.detail
+                logger.error(f"OpenAI query failed: {error_message}")
+                yield f"data: {json.dumps({'type': 'error', 'message': error_message})}\n\n"
+                return
 
             # Step 2: Send initial titles/years immediately
             initial_data = [{"title": movie.title, "year": movie.year} for movie in movie_list]
@@ -520,8 +538,15 @@ async def stream_movie_section(query: str = Query(..., description="Section quer
                 return
 
             # Step 1: Query OpenAI for movie recommendations
-            movie_list = query_openai_for_movies(query)
-            logger.info(f"OpenAI returned {len(movie_list)} movie recommendations for section")
+            try:
+                movie_list = query_openai_for_movies(query)
+                logger.info(f"OpenAI returned {len(movie_list)} movie recommendations for section")
+            except HTTPException as http_exc:
+                # Handle HTTPException from query_openai_for_movies
+                error_message = http_exc.detail
+                logger.error(f"OpenAI query failed: {error_message}")
+                yield f"data: {json.dumps({'type': 'error', 'message': error_message})}\n\n"
+                return
 
             # Step 2: Send initial titles/years immediately
             initial_data = [{"title": movie.title, "year": movie.year} for movie in movie_list]
