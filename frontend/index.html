@@ -27,7 +27,7 @@
     <meta property="og:url" content="https://findsmovies.com/" />
     <meta property="og:title" content="FindsMovies - Discover Movies with AI" />
     <meta property="og:description" content="Discover your next favorite movie with AI-powered recommendations. Describe the movie you want, and get suggestions instantly." />
-    <meta property="og:image" content="https://findsmovies.com/og-image.png" />
+    <meta property="og:image" content="https://findsmovies.com/favicon.ico" />
     <meta property="og:site_name" content="FindsMovies" />
 
     <!-- Twitter -->
@@ -35,10 +35,49 @@
     <meta name="twitter:url" content="https://findsmovies.com/" />
     <meta name="twitter:title" content="FindsMovies - Discover Movies with AI" />
     <meta name="twitter:description" content="Discover your next favorite movie with AI-powered recommendations. Describe the movie you want, and get suggestions instantly." />
-    <meta name="twitter:image" content="https://findsmovies.com/og-image.png" />
+    <meta name="twitter:image" content="https://findsmovies.com/favicon.ico" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!--
+        Static content for search engine crawlers.
+        React will replace this when it mounts.
+      -->
+      <main style="font-family:sans-serif;max-width:800px;margin:0 auto;padding:2rem;background:#000;color:#fff;">
+        <h1>FindsMovies - Discover Movies &amp; TV Shows with AI</h1>
+        <p>
+          FindsMovies uses AI to recommend movies and TV shows based on what you describe.
+          Just type what kind of film or series you're in the mood for and get instant
+          personalised suggestions powered by artificial intelligence.
+        </p>
+        <h2>How it works</h2>
+        <ul>
+          <li>Describe the movie or TV show you want — in plain English</li>
+          <li>Our AI finds the best matches from a vast catalogue</li>
+          <li>Browse detailed results with ratings, trailers and streaming links</li>
+        </ul>
+        <h2>Features</h2>
+        <ul>
+          <li>AI-powered movie recommendations</li>
+          <li>Filter by movies, TV shows, anime or K-dramas</li>
+          <li>See where to watch on Netflix, Prime Video, Disney+ and more</li>
+          <li>Read reviews and ratings before you decide</li>
+        </ul>
+        <p>
+          Start discovering your next favourite watch at
+          <a href="https://findsmovies.com">findsmovies.com</a>.
+        </p>
+      </main>
+    </div>
+    <noscript>
+      <main style="font-family:sans-serif;max-width:800px;margin:0 auto;padding:2rem;">
+        <h1>FindsMovies - Discover Movies &amp; TV Shows with AI</h1>
+        <p>
+          FindsMovies uses AI to recommend movies and TV shows based on what you describe.
+          Please enable JavaScript to use the full interactive experience.
+        </p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
