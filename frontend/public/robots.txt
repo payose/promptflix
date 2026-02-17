@@ -3,4 +3,4 @@ User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://promptflix.com/sitemap.xml
+Sitemap: https://findsmovies.com/sitemap.xml
