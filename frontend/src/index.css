@@ -58,7 +58,7 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #000000;
+  background-color: #141414;
   overflow-x: hidden;
 }
 
@@ -72,7 +72,7 @@ h1 {
 @media (prefers-color-scheme: light) {
   :root {
     color: rgba(255, 255, 255, 0.87);
-    background-color: #000000;
+    background-color: #141414;
   }
   a:hover {
     color: #f59e0b;
@@ -141,10 +141,10 @@ h1 {
   }
   body {
     @apply text-foreground;
-    background-color: #000000 !important;
+    background-color: #141414 !important;
   }
   html {
-    background-color: #000000 !important;
+    background-color: #141414 !important;
   }
 }
 
