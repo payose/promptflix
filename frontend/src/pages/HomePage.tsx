@@ -68,11 +68,11 @@ const HomePage = () => {
                 Skip to main content
             </a>
 
-            <div className="min-h-screen w-screen relative bg-black">
+            <div className="min-h-screen w-screen relative">
                 <Header hideSearchBox={isHeroVisible} />
 
                 {/* Main content area */}
-                <main id="main-content" className="mt-20 bg-black">
+                <main id="main-content" className="mt-20">
                     {/* Hero Section */}
                     <section
                         ref={heroRef}

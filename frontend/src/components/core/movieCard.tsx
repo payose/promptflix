@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import type { Movie } from '@/types/movie';
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Star } from 'lucide-react';
 import { trackMovieClick } from '@/utils/tracking';
 
@@ -19,6 +19,8 @@ interface MovieCardProps {
 }
 
 const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeave }) => {
+    const location = useLocation();
+
     // Check if movie is fully loaded
     const isFullMovie = (m: Movie | PartialMovie): m is Movie => {
         return 'id' in m && m.id !== undefined;
@@ -35,10 +37,6 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeav
             trackMovieClick(movieId, fullMovie.title);
         }
     };
-
-    const moviePageProp = fullMovie ? {
-        movie: fullMovie,
-    } : null;
 
     const cardContent = (
         <div
@@ -109,7 +107,11 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeav
     return (
         <>
             {isLoading ? cardContent : (
-                <Link to={`/movies/${fullMovie!.id}`} state={moviePageProp} onClick={handleClick}>
+                <Link
+                    to={`/movies/${fullMovie!.id}`}
+                    state={{ backgroundLocation: location, movie: fullMovie }}
+                    onClick={handleClick}
+                >
                     {cardContent}
                 </Link>
             )}

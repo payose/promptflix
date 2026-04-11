@@ -24,7 +24,7 @@ export default function Header({ hideSearchBox = false }: HeaderProps) {
         className={`
             fixed top-0 w-full z-50 transition-all
             ${scrolled
-              ? 'bg-black/80 backdrop-blur-md border-b border-zinc-800'
+              ? 'bg-[#232323] backdrop-blur-md border-b border-zinc-800'
               : 'bg-transparent border-b border-zinc-900'
             }
         `}

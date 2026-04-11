@@ -21,7 +21,7 @@ const ReviewCard: React.FC<{ review: Review }> = ({ review }) => {
     };
   
     return (
-      <div className="bg-gray-800/50 rounded-lg p-6 space-y-4">
+      <div className="bg-[#232323] rounded-lg p-6 space-y-4">
         {/* Review Header */}
         <div className="flex items-center gap-4">
           <img 
