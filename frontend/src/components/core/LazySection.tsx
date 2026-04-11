@@ -9,7 +9,7 @@ interface LazySectionProps {
     index: number;
 }
 
-export default function LazySection({ query, index }: LazySectionProps) {
+export default function LazySection({ query }: LazySectionProps) {
     const sectionRef = useRef<HTMLDivElement>(null);
     const [isVisible, setIsVisible] = useState(false);
     const [hasLoaded, setHasLoaded] = useState(false);
