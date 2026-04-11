@@ -278,7 +278,7 @@ def query_openai_for_movies(prompt: str, content_filter: Optional[str] = None) -
         raise HTTPException(status_code=500, detail=f"OpenAI request failed: {str(e)}")
 
 def fetch_movie_details(movie_item: MovieListItem, content_filter: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    """Fetch detailed movie/TV information from TMDB based on content filter"""
+    """Fetch detailed movie/TV information from TMDB based on content filter (synchronous)"""
     try:
         # Determine search endpoint based on filter
         if content_filter in ["tv-shows", "anime", "k-drama"]:
@@ -305,6 +305,13 @@ def fetch_movie_details(movie_item: MovieListItem, content_filter: Optional[str]
     except Exception as e:
         logger.error(f"Error fetching details for {movie_item.title}: {e}")
         return None
+
+async def fetch_movie_details_async(movie_item: MovieListItem, content_filter: Optional[str] = None, index: int = 0) -> tuple[int, Optional[Dict[str, Any]]]:
+    """Async version of fetch_movie_details for parallel execution"""
+    # Run sync function in thread pool to avoid blocking
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, fetch_movie_details, movie_item, content_filter)
+    return (index, result)
 
 # Streaming endpoint for search (progressive loading)
 @app.get("/api/movies/search/stream")
@@ -363,16 +370,26 @@ async def stream_movie_search(
             initial_data = [{"title": movie.title, "year": movie.year} for movie in movie_list]
             yield f"data: {json.dumps({'type': 'initial', 'query': query, 'movies': initial_data})}\n\n"
 
-            # Step 3: Fetch and stream detailed information for each item
-            detailed_movies = []
-            for index, movie_item in enumerate(movie_list):
-                movie_details = fetch_movie_details(movie_item, filter)
+            # Step 3: Fetch all TMDB details in parallel for faster loading
+            # Create tasks for all movies at once
+            fetch_tasks = [
+                fetch_movie_details_async(movie_item, filter, index)
+                for index, movie_item in enumerate(movie_list)
+            ]
+
+            # Fetch all in parallel but stream results as they complete
+            detailed_movies_dict = {}
+            for coro in asyncio.as_completed(fetch_tasks):
+                index, movie_details = await coro
                 if movie_details:
-                    detailed_movies.append(movie_details)
-                    # Stream each detail as it's fetched
+                    detailed_movies_dict[index] = movie_details
+                    # Stream each detail as it completes (order may vary)
                     yield f"data: {json.dumps({'type': 'detail', 'query': query, 'index': index, 'movie': movie_details})}\n\n"
                     # Small delay to avoid overwhelming the client
-                    await asyncio.sleep(0.05)
+                    await asyncio.sleep(0.01)
+
+            # Sort by original index to maintain order in cache
+            detailed_movies = [detailed_movies_dict[i] for i in sorted(detailed_movies_dict.keys())]
 
             # Cache the complete results with filter-specific key
             search_cache[cache_key] = detailed_movies
