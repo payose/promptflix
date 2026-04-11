@@ -306,75 +306,6 @@ def fetch_movie_details(movie_item: MovieListItem, content_filter: Optional[str]
         logger.error(f"Error fetching details for {movie_item.title}: {e}")
         return None
 
-# Main search endpoint that mirrors Redux queryAIforMovieList
-@app.get("/api/movies/search")
-def search_movies_with_ai(
-    query: str = Query(..., description="Search query for movie recommendations"),
-    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama"),
-    session_id: str = Depends(get_session_id),  # Get session_id from cookie
-    user_id: Optional[int] = Depends(get_user_id),  # Get user_id if logged in
-    db: Session = Depends(get_db)  # Get database session
-) -> Dict[str, Any]:
-    """
-    Search for movies using AI recommendations + TMDB details (mirrors queryAIforMovieList)
-
-    Why the new dependencies:
-    - session_id: Tracks anonymous users via cookie
-    - user_id: If user is logged in, links search to their account
-    - db: Database session to save search history
-    """
-
-    # Create cache key that includes filter
-    cache_key = f"{query}_{filter or 'all'}"
-
-    # Check cache first
-    if cache_key in search_cache:
-        logger.info(f"Returning cached results for search query: {query} (filter: {filter})")
-        return {
-            "query": query,
-            "movies": search_cache[cache_key],
-            "cached": True
-        }
-
-    try:
-        # Step 1: Query OpenAI for movie/TV recommendations with filter
-        movie_list = query_openai_for_movies(query, filter)
-        logger.info(f"OpenAI returned {len(movie_list)} recommendations (filter: {filter})")
-
-        # Step 2: Fetch detailed information for each item from TMDB
-        detailed_movies = []
-        for movie_item in movie_list:
-            movie_details = fetch_movie_details(movie_item, filter)
-            if movie_details:
-                detailed_movies.append(movie_details)
-
-        # Cache the results with filter-specific key
-        search_cache[cache_key] = detailed_movies
-
-        # Step 3: Save search to database for tracking
-        # Why: Track what users search for, even when anonymous
-        search_record = SearchHistory(
-            session_id=session_id,  # Always present (from cookie)
-            user_id=user_id,  # None if anonymous, set if logged in
-            query=query,
-            results_count=len(detailed_movies)
-        )
-        db.add(search_record)
-        db.commit()
-        logger.info(f"Saved search to database: session_id={session_id}, user_id={user_id}")
-
-        logger.info(f"Successfully fetched details for {len(detailed_movies)} items")
-        return {
-            "query": query,
-            "movies": detailed_movies,
-            "cached": False
-        }
-
-    except Exception as e:
-        logger.error(f"Error in search_movies_with_ai: {e}")
-        db.rollback()  # Rollback database changes on error
-        raise HTTPException(status_code=500, detail="Failed to search movies")
-
 # Streaming endpoint for search (progressive loading)
 @app.get("/api/movies/search/stream")
 async def stream_movie_search(
@@ -776,7 +707,6 @@ def root():
         "docs": "/docs",
         "health": "/api/health",
         "endpoints": {
-            "search": "GET /api/movies/search?query=...&filter=...",
             "search_stream": "GET /api/movies/search/stream?query=...&filter=...",
             "movie_details": "GET /api/movies/{movie_id}?media_type=...",
             "movie_reviews": "GET /api/movies/{movie_id}/reviews?media_type=...",
