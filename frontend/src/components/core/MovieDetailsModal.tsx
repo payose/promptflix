@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Plus, ThumbsUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Movie, Review } from '@/types/movie';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ReviewCard from "@/components/core/reviews"
@@ -210,73 +210,76 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({ movieId, mediaTyp
                             <>
                                 {/* Hero Section with Backdrop */}
                                 <div className="relative h-[70vh] w-full overflow-hidden">
-                                    {/* Backdrop Image */}
-                                    <img
-                                        src={imageError ? `https://images.pexels.com/photos/29890776/pexels-photo-29890776/free-photo-of-traditional-vietnamese-new-year-gift-box.jpeg?auto=compress&cs=tinysrgb&w=1200`
-                                            : `http://image.tmdb.org/t/p/original/${details.backdrop_path}`}
-                                        className='w-full h-full object-cover'
-                                        alt={`${details.title} backdrop`}
-                                        loading="eager"
-                                        onError={() => setImageError(true)}
-                                    />
+                                    {!activeTrailer ? (
+                                        <>
+                                            {/* Backdrop Image */}
+                                            <img
+                                                src={imageError ? `https://images.pexels.com/photos/29890776/pexels-photo-29890776/free-photo-of-traditional-vietnamese-new-year-gift-box.jpeg?auto=compress&cs=tinysrgb&w=1200`
+                                                    : `http://image.tmdb.org/t/p/original/${details.backdrop_path}`}
+                                                className='w-full h-full object-cover'
+                                                alt={`${details.title} backdrop`}
+                                                loading="eager"
+                                                onError={() => setImageError(true)}
+                                            />
 
-                                    {/* Gradient Overlay */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/60 to-transparent" />
-                                    <div className="absolute inset-0 bg-gradient-to-r from-[#141414]/80 via-transparent to-transparent" />
+                                            {/* Gradient Overlay */}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/60 to-transparent" />
+                                            <div className="absolute inset-0 bg-gradient-to-r from-[#141414]/80 via-transparent to-transparent" />
 
-                                    {/* Centered Pulsating Play Button */}
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <button
-                                            onClick={() => getYoutubeTrailer(
-                                                details.title,
-                                                mediaType,
-                                                details.release_date ? new Date(details.release_date).getFullYear().toString() : undefined
-                                            )}
-                                            className="group relative"
-                                        >
-                                            {/* Pulsating ring effect */}
-                                            <div className="absolute inset-0 rounded-full bg-white/30 animate-ping" />
-                                            <div className="absolute inset-0 rounded-full bg-white/20 animate-pulse" />
+                                            {/* Centered Pulsating Play Button */}
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <button
+                                                    onClick={() => getYoutubeTrailer(
+                                                        details.title,
+                                                        mediaType,
+                                                        details.release_date ? new Date(details.release_date).getFullYear().toString() : undefined
+                                                    )}
+                                                    className="group relative"
+                                                >
+                                                    {/* Pulsating ring effect */}
+                                                    <div className="absolute inset-0 rounded-full bg-white/30 animate-ping" />
+                                                    <div className="absolute inset-0 rounded-full bg-white/20 animate-pulse" />
 
-                                            {/* Play button */}
-                                            <div className="relative bg-white/90 hover:bg-white rounded-full p-6 transition-all duration-300 group-hover:scale-110">
-                                                <Play className="w-12 h-12 text-black fill-black" />
+                                                    {/* Play button */}
+                                                    <div className="relative bg-white/90 hover:bg-white rounded-full p-6 transition-all duration-300 group-hover:scale-110">
+                                                        <Play className="w-12 h-12 text-black fill-black" />
+                                                    </div>
+                                                </button>
                                             </div>
-                                        </button>
-                                    </div>
 
-                                    {/* Content Overlay - Bottom Left */}
-                                    <div className="absolute bottom-0 left-0 p-12 max-w-2xl">
-                                        {/* Netflix Logo Style Title */}
-                                        <div className="mb-6">
-                                            <h1 className="text-2xl md:text-3xl font-bold text-white mb-4 drop-shadow-2xl">
-                                                {details.title}
-                                            </h1>
-                                            {details.tagline && (
-                                                <p className="text-lg text-white/90 italic mb-4">{details.tagline}</p>
-                                            )}
-                                        </div>
+                                            {/* Content Overlay - Bottom Left */}
+                                            <div className="absolute bottom-0 left-0 p-12 max-w-2xl">
+                                                {/* Netflix Logo Style Title */}
+                                                <div className="mb-6">
+                                                    <h1 className="text-2xl md:text-3xl font-bold text-white mb-4 drop-shadow-2xl">
+                                                        {details.title}
+                                                    </h1>
+                                                    {details.tagline && (
+                                                        <p className="text-lg text-white/90 italic mb-4">{details.tagline}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            {/* Trailer Player */}
+                                            <iframe
+                                                src={`https://www.youtube.com/embed/${activeTrailer}?autoplay=1&rel=0`}
+                                                className="w-full h-full"
+                                                title={`${details.title} - Official Trailer`}
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                            />
 
-                                        {/* Action Buttons */}
-                                        {/* <div className="flex items-center gap-3 mb-6">
+                                            {/* Close Button */}
                                             <button
-                                                onClick={() => getYoutubeTrailer(
-                                                    details.title,
-                                                    mediaType,
-                                                    details.release_date ? new Date(details.release_date).getFullYear().toString() : undefined
-                                                )}
-                                                className="bg-white hover:bg-white/90 text-black font-bold px-8 py-3 rounded-md flex items-center gap-2 transition-all text-lg"
+                                                onClick={() => setActiveTrailer(null)}
+                                                className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all hover:scale-110"
                                             >
-                                                <Play className="w-6 h-6 fill-black" /> Play
+                                                <X className="w-6 h-6" />
                                             </button>
-                                            <button className="bg-gray-500/70 hover:bg-gray-500/90 text-white p-3 rounded-full transition-all">
-                                                <Plus className="w-6 h-6" />
-                                            </button>
-                                            <button className="bg-gray-500/70 hover:bg-gray-500/90 text-white p-3 rounded-full transition-all">
-                                                <ThumbsUp className="w-6 h-6" />
-                                            </button>
-                                        </div> */}
-                                    </div>
+                                        </>
+                                    )}
                                 </div>
 
                                 {/* Details Section */}
@@ -401,27 +404,6 @@ const MovieDetailsModal: React.FC<MovieDetailsModalProps> = ({ movieId, mediaTyp
                             </>
                         )}
                     </div>
-
-                    {/* Trailer Modal */}
-                    {activeTrailer && (
-                        <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center p-4">
-                            <div className="max-w-5xl w-full">
-                                <button
-                                    onClick={() => setActiveTrailer(null)}
-                                    className="absolute top-4 right-4 text-white text-2xl hover:text-zinc-300 bg-black/50 w-12 h-12 flex items-center justify-center rounded-full transition-all hover:scale-110"
-                                >
-                                    ✕
-                                </button>
-                                <iframe
-                                    src={`https://www.youtube.com/embed/${activeTrailer}?autoplay=1`}
-                                    className="w-full aspect-video rounded-lg"
-                                    title={`${details?.title} - Official Trailer`}
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    allowFullScreen
-                                />
-                            </div>
-                        </div>
-                    )}
                 </DialogContent>
             </Dialog>
         </>
