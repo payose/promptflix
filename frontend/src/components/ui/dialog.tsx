@@ -40,8 +40,8 @@ const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) => {
 const DialogContent: React.FC<DialogContentProps> = ({ children, className = "" }) => {
   return (
     <div className={`fixed inset-0 overflow-y-auto ${className}`}>
-      <div className="min-h-screen flex items-start justify-center p-0">
-        <div className="relative bg-[#181818] w-full max-w-3xl my-0">
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="relative bg-[#181818] w-full max-w-3xl m-auto">
           {children}
         </div>
       </div>
