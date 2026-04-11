@@ -1,142 +1,16 @@
-import { useEffect, useState, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import MovieCard from '@/components/core/movieCard';
 import { RootState } from '@/redux/store';
-import { useMovieStreaming } from '@/hooks/useMovieStreaming';
+import LazySection from './LazySection';
 
 const sectionQueries = [
-    'mind-bending sci-fi movies that make you cringe',
+    'Mind-bending sci-fi movies that make you cringe',
     'Movies based on novel adaptations',
-    'movies from parallel universes without any superheroes',
-    'movies that make you ponder on the meaning of life',
+    'Movies from parallel universes without any superheroes',
+    'Movies that make you ponder on the meaning of life',
 ];
 
-
-interface MovieSectionProps {
-    query: string;
-    movies: any[];
-}
-
-const MovieSection = ({ query, movies }: MovieSectionProps) => {
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const [hoveredMovie, setHoveredMovie] = useState<number | string | null>(null);
-    const [showLeftArrow, setShowLeftArrow] = useState(false);
-    const [showRightArrow, setShowRightArrow] = useState(true);
-
-    const scroll = (direction: 'left' | 'right') => {
-        if (scrollRef.current) {
-            const scrollAmount = scrollRef.current.clientWidth * 0.8;
-            const newScrollLeft = scrollRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
-
-            scrollRef.current.scrollTo({
-                left: newScrollLeft,
-                behavior: 'smooth'
-            });
-        }
-    };
-
-    const handleScroll = () => {
-        if (scrollRef.current) {
-            const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-            setShowLeftArrow(scrollLeft > 0);
-            setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
-        }
-    };
-
-    if (!movies || movies.length === 0) {
-        return null;
-    }
-
-    return (
-        <div className="relative group mb-16 lg:pl-10">
-            {/* Section Header */}
-            <div className="px-4 md:px-8">
-                <div className="mb-6">
-                    <h2 className="text-lg md:text-xl font-semibold text-transparent bg-clip-text bg-gray-300 inline-block">
-                        {query}
-                    </h2>
-                </div>
-
-                {/* Movies Row */}
-                <div className="relative">
-                    {/* Left Arrow */}
-                    {showLeftArrow && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => scroll('left')}
-                            className="absolute -left-4 md:left-0 top-1/2 -translate-y-1/2 z-40 rounded-full bg-amber-500/90 text-white hover:bg-amber-600 hover:text-white opacity-0 group-hover:opacity-100 transition-all duration-300 h-10 w-10 md:h-12 md:w-12 shadow-lg shadow-amber-500/30"
-                        >
-                            <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
-                        </Button>
-                    )}
-
-                    {/* Right Arrow */}
-                    {showRightArrow && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => scroll('right')}
-                            className="absolute -right-4 md:right-0 top-1/2 -translate-y-1/2 z-40 rounded-full bg-amber-500/90 text-white hover:bg-amber-600 hover:text-white opacity-0 group-hover:opacity-100 transition-all duration-300 h-10 w-10 md:h-12 md:w-12 shadow-lg shadow-amber-500/30"
-                        >
-                            <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
-                        </Button>
-                    )}
-
-                    {/* Movies Container */}
-                    <div
-                        ref={scrollRef}
-                        onScroll={handleScroll}
-                        className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-4"
-                        style={{
-                            scrollbarWidth: 'none',
-                            msOverflowStyle: 'none'
-                        } as React.CSSProperties}
-                    >
-                        {movies.map((movie, index) => {
-                            const isFullMovie = 'id' in movie && movie.id !== undefined;
-                            // Use stable key based on index to prevent React re-mounting during streaming
-                            const movieKey = `${query}-${index}`;
-
-                            return (
-                                <div key={movieKey} className="flex-none w-32 md:w-44">
-                                    <MovieCard
-                                        movie={movie}
-                                        isHovered={isFullMovie && hoveredMovie === movie.id}
-                                        onHover={isFullMovie ? () => setHoveredMovie(movie.id) : undefined}
-                                        onLeave={isFullMovie ? () => setHoveredMovie(null) : undefined}
-                                    />
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 export default function SectionResults() {
-    const { partialSections, sectionLoading, sectionError } = useSelector((state: RootState) => state.movies);
-    const { streamMovies } = useMovieStreaming({ type: 'section' });
-    const [initialLoading, setInitialLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchSectionMovies = async () => {
-            for (const query of sectionQueries) {
-                // Only fetch if we don't have cached results
-                if (!partialSections[query]) {
-                    await streamMovies(query);
-                }
-            }
-            // Once all queries are done or cached, stop initial loading
-            setInitialLoading(false);
-        };
-
-        fetchSectionMovies();
-    }, [partialSections, streamMovies]);
+    const { sectionError } = useSelector((state: RootState) => state.movies);
 
     return (
         <div className="mt-8 mb-10 xl:mb-30 min-h-screen">
@@ -150,38 +24,15 @@ export default function SectionResults() {
                 </div>
             )}
 
-            {(sectionLoading || initialLoading) && Object.keys(partialSections).length === 0 && !sectionError ? (
-                <div className="space-y-12">
-                    {/* Skeleton sections */}
-                    {sectionQueries.map((sectionIndex) => (
-                        <div key={sectionIndex} className="lg:pl-10">
-                            <div className="px-4 md:px-8">
-                                {/* Section title skeleton */}
-                                <div className="h-7 bg-zinc-800 rounded w-64 mb-6 animate-pulse" />
-
-                                {/* Horizontal movie skeletons */}
-                                <div className="flex gap-3 md:gap-4 overflow-hidden">
-                                    {Array.from({ length: 7 }).map((_, index) => (
-                                        <div key={index} className="flex-none w-32 md:w-44 animate-pulse">
-                                            <div className="aspect-[2/3] bg-zinc-800 rounded-md" />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="space-y-4">
-                    {sectionQueries.map((query, index) => (
-                        <MovieSection
-                            key={index}
-                            query={query}
-                            movies={partialSections[query] || []}
-                        />
-                    ))}
-                </div>
-            )}
+            <div className="space-y-4">
+                {sectionQueries.map((query, index) => (
+                    <LazySection
+                        key={query}
+                        query={query}
+                        index={index}
+                    />
+                ))}
+            </div>
 
             {/* CSS to hide scrollbars */}
             <style>{`
