@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
-import requests
+import httpx
 import os
 import logging
 from typing import List, Dict, Any, Optional
@@ -70,6 +70,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Environment variables
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+TMDB_BASE_URL = os.getenv("TMDB_BASE_URL", "https://api.themoviedb.org/3").rstrip("/")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
 
 if not TMDB_API_KEY:
     logger.warning("TMDB_API_KEY not found in environment variables")
@@ -167,21 +169,25 @@ def transform_tmdb_tv(tv_data: Dict[str, Any]) -> Dict[str, Any]:
         "media_type": "tv",
     }
 
-def make_tmdb_request(endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
-    """Helper function to make TMDB API requests"""
+async def make_tmdb_request(endpoint: str, params: Dict[str, Any] = None, client: httpx.AsyncClient = None) -> Dict[str, Any]:
+    """Async helper function to make TMDB API requests with optional connection pooling"""
     if not TMDB_API_KEY:
         raise HTTPException(status_code=500, detail="TMDB API key not configured")
-    
-    url = f"https://api.themoviedb.org/3{endpoint}"
+
+    url = f"{TMDB_BASE_URL}{endpoint}"
     request_params = {"api_key": TMDB_API_KEY}
     if params:
         request_params.update(params)
-    
+
     try:
-        response = requests.get(url, params=request_params, timeout=10)
+        if client:
+            response = await client.get(url, params=request_params, timeout=10)
+        else:
+            async with httpx.AsyncClient() as temp_client:
+                response = await temp_client.get(url, params=request_params, timeout=10)
         response.raise_for_status()
         return response.json()
-    except requests.exceptions.RequestException as e:
+    except httpx.RequestError as e:
         logger.error(f"TMDB request failed: {e}")
         raise HTTPException(status_code=500, detail=f"TMDB request failed: {str(e)}")
 
@@ -232,9 +238,9 @@ def query_openai_for_movies(prompt: str, content_filter: Optional[str] = None) -
             "max_tokens": 1000
         }
         
-        response = requests.post(
-            "https://api.openai.com/v1/chat/completions", 
-            headers=headers, 
+        response = httpx.post(
+            f"{OPENAI_BASE_URL}/chat/completions",
+            headers=headers,
             json=body,
             timeout=30
         )
@@ -262,9 +268,9 @@ def query_openai_for_movies(prompt: str, content_filter: Optional[str] = None) -
             logger.error(f"Failed to parse OpenAI response: {e}")
             raise HTTPException(status_code=500, detail="Failed to parse AI movie recommendations")
             
-    except requests.exceptions.HTTPError as e:
+    except httpx.HTTPStatusError as e:
         # Check specifically for rate limit errors (429)
-        if hasattr(e, 'response') and e.response is not None and e.response.status_code == 429:
+        if e.response.status_code == 429:
             logger.error(f"OpenAI rate limit exceeded: {e}")
             raise HTTPException(
                 status_code=429,
@@ -273,45 +279,30 @@ def query_openai_for_movies(prompt: str, content_filter: Optional[str] = None) -
         else:
             logger.error(f"OpenAI HTTP error: {e}")
             raise HTTPException(status_code=500, detail=f"OpenAI request failed: {str(e)}")
-    except requests.exceptions.RequestException as e:
+    except httpx.RequestError as e:
         logger.error(f"OpenAI request failed: {e}")
         raise HTTPException(status_code=500, detail=f"OpenAI request failed: {str(e)}")
 
-def fetch_movie_details(movie_item: MovieListItem, content_filter: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    """Fetch detailed movie/TV information from TMDB based on content filter (synchronous)"""
+async def fetch_movie_details(movie_item: MovieListItem, content_filter: Optional[str] = None, index: int = 0, client: httpx.AsyncClient = None) -> tuple[int, Optional[Dict[str, Any]]]:
+    """Fetch detailed movie/TV information from TMDB with optional parallel execution"""
     try:
         # Determine search endpoint based on filter
         if content_filter in ["tv-shows", "anime", "k-drama"]:
-            # Search for TV shows
             params = {"query": movie_item.title, "first_air_date_year": movie_item.year}
-            data = make_tmdb_request("/search/tv", params)
-
+            data = await make_tmdb_request("/search/tv", params, client)
             if data.get("results") and len(data["results"]) > 0:
-                return transform_tmdb_tv(data["results"][0])
-            else:
-                logger.warning(f"No TMDB TV results found for {movie_item.title} ({movie_item.year})")
-                return None
+                return (index, transform_tmdb_tv(data["results"][0]))
+            logger.warning(f"No TMDB TV results found for {movie_item.title} ({movie_item.year})")
         else:
-            # Search for movies (default for 'movies', 'all', or None)
             params = {"query": movie_item.title, "year": movie_item.year}
-            data = make_tmdb_request("/search/movie", params)
-
+            data = await make_tmdb_request("/search/movie", params, client)
             if data.get("results") and len(data["results"]) > 0:
-                return transform_tmdb_movie(data["results"][0])
-            else:
-                logger.warning(f"No TMDB movie results found for {movie_item.title} ({movie_item.year})")
-                return None
-
+                return (index, transform_tmdb_movie(data["results"][0]))
+            logger.warning(f"No TMDB movie results found for {movie_item.title} ({movie_item.year})")
+        return (index, None)
     except Exception as e:
         logger.error(f"Error fetching details for {movie_item.title}: {e}")
-        return None
-
-async def fetch_movie_details_async(movie_item: MovieListItem, content_filter: Optional[str] = None, index: int = 0) -> tuple[int, Optional[Dict[str, Any]]]:
-    """Async version of fetch_movie_details for parallel execution"""
-    # Run sync function in thread pool to avoid blocking
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(None, fetch_movie_details, movie_item, content_filter)
-    return (index, result)
+        return (index, None)
 
 # Streaming endpoint for search (progressive loading)
 @app.get("/api/movies/search/stream")
@@ -370,23 +361,17 @@ async def stream_movie_search(
             initial_data = [{"title": movie.title, "year": movie.year} for movie in movie_list]
             yield f"data: {json.dumps({'type': 'initial', 'query': query, 'movies': initial_data})}\n\n"
 
-            # Step 3: Fetch all TMDB details in parallel for faster loading
-            # Create tasks for all movies at once
-            fetch_tasks = [
-                fetch_movie_details_async(movie_item, filter, index)
-                for index, movie_item in enumerate(movie_list)
-            ]
+            # Step 3: Fetch all TMDB details in parallel using shared client for connection pooling
+            async with httpx.AsyncClient() as client:
+                fetch_tasks = [fetch_movie_details(movie, filter, i, client) for i, movie in enumerate(movie_list)]
 
-            # Fetch all in parallel but stream results as they complete
-            detailed_movies_dict = {}
-            for coro in asyncio.as_completed(fetch_tasks):
-                index, movie_details = await coro
-                if movie_details:
-                    detailed_movies_dict[index] = movie_details
-                    # Stream each detail as it completes (order may vary)
-                    yield f"data: {json.dumps({'type': 'detail', 'query': query, 'index': index, 'movie': movie_details})}\n\n"
-                    # Small delay to avoid overwhelming the client
-                    await asyncio.sleep(0.01)
+                detailed_movies_dict = {}
+                for coro in asyncio.as_completed(fetch_tasks):
+                    index, movie_details = await coro
+                    if movie_details:
+                        detailed_movies_dict[index] = movie_details
+                        yield f"data: {json.dumps({'type': 'detail', 'query': query, 'index': index, 'movie': movie_details})}\n\n"
+                        await asyncio.sleep(0.01)
 
             # Sort by original index to maintain order in cache
             detailed_movies = [detailed_movies_dict[i] for i in sorted(detailed_movies_dict.keys())]
@@ -433,15 +418,13 @@ async def stream_movie_search(
 
 # Fetch individual movie results (mirrors fetchMoviesResults)
 @app.post("/api/movies/fetch-details")
-def fetch_movie_result(movie_item: MovieListItem) -> Dict[str, Any]:
-    """Fetch detailed movie information for a single movie (mirrors fetchMoviesResults)"""
+async def fetch_movie_result(movie_item: MovieListItem) -> Dict[str, Any]:
+    """Fetch detailed movie information for a single movie"""
     try:
-        movie_details = fetch_movie_details(movie_item)
+        _, movie_details = await fetch_movie_details(movie_item, index=0)
         if movie_details:
             return movie_details
-        else:
-            raise HTTPException(status_code=404, detail="No movie found")
-            
+        raise HTTPException(status_code=404, detail="No movie found")
     except HTTPException:
         raise
     except Exception as e:
@@ -465,25 +448,21 @@ def clear_all_cache():
 
 # Individual movie/TV details endpoint
 @app.get("/api/movies/{content_id}")
-def get_content_details(
+async def get_content_details(
     content_id: int,
     media_type: Optional[str] = Query(None, description="Media type: movie or tv")
 ) -> Dict[str, Any]:
     """Get detailed information for a specific movie or TV show"""
     try:
-        # Determine endpoint based on media_type
         endpoint = f"/tv/{content_id}" if media_type == "tv" else f"/movie/{content_id}"
-
-        data = make_tmdb_request(endpoint)
+        data = await make_tmdb_request(endpoint)
         base_image_url = "https://image.tmdb.org/t/p/w500"
 
-        # Transform poster and backdrop paths to full URLs
         if data.get('poster_path'):
             data['poster_path'] = f"{base_image_url}{data['poster_path']}"
         if data.get('backdrop_path'):
             data['backdrop_path'] = f"{base_image_url}{data['backdrop_path']}"
 
-        # Normalize TV show data to match movie structure for frontend compatibility
         if media_type == "tv":
             data['title'] = data.get('name', data.get('title'))
             data['release_date'] = data.get('first_air_date', data.get('release_date'))
@@ -491,7 +470,6 @@ def get_content_details(
             data['media_type'] = 'tv'
         else:
             data['media_type'] = 'movie'
-
         return data
     except Exception as e:
         logger.error(f"Error getting content details for ID {content_id} (type: {media_type}): {e}")
@@ -499,51 +477,47 @@ def get_content_details(
 
 # Get reviews of a specific movie/TV show
 @app.get("/api/movies/{content_id}/reviews")
-def get_content_reviews(
+async def get_content_reviews(
     content_id: int,
     media_type: Optional[str] = Query(None, description="Media type: movie or tv")
 ) -> Dict[str, Any]:
     """Get reviews for a specific movie or TV show"""
     try:
         endpoint = f"/tv/{content_id}/reviews" if media_type == "tv" else f"/movie/{content_id}/reviews"
-        data = make_tmdb_request(endpoint)
-        return data
+        return await make_tmdb_request(endpoint)
     except Exception as e:
         logger.error(f"Error getting reviews for ID {content_id} (type: {media_type}): {e}")
         raise HTTPException(status_code=500, detail="Failed to get reviews")
 
 # Get watch providers for a specific movie/TV show
 @app.get("/api/movies/{content_id}/watch/providers")
-def get_content_watch_providers(
+async def get_content_watch_providers(
     content_id: int,
     media_type: Optional[str] = Query(None, description="Media type: movie or tv")
 ) -> Dict[str, Any]:
     """Get streaming/rental/purchase availability for a specific movie or TV show"""
     try:
         endpoint = f"/tv/{content_id}/watch/providers" if media_type == "tv" else f"/movie/{content_id}/watch/providers"
-        data = make_tmdb_request(endpoint)
-        return data
+        return await make_tmdb_request(endpoint)
     except Exception as e:
         logger.error(f"Error getting watch providers for ID {content_id} (type: {media_type}): {e}")
         raise HTTPException(status_code=500, detail="Failed to get watch providers")
 
-
-# Direct TMDB search endpoint (for cases where you need direct TMDB search)
+# Direct TMDB search endpoint
 @app.get("/api/tmdb/search")
-def direct_tmdb_search(query: str = Query(..., description="Movie search query"), 
-                      year: Optional[int] = None) -> List[Dict[str, Any]]:
-    """Direct TMDB search without AI (for specific use cases)"""
+async def direct_tmdb_search(
+    query: str = Query(..., description="Movie search query"),
+    year: Optional[int] = None
+) -> List[Dict[str, Any]]:
+    """Direct TMDB search without AI"""
     try:
         params = {"query": query, "page": 1}
         if year:
             params["year"] = year
-        
-        data = make_tmdb_request("/search/movie", params)
+        data = await make_tmdb_request("/search/movie", params)
         movies = [transform_tmdb_movie(movie) for movie in data.get("results", [])]
-        
         logger.info(f"Found {len(movies)} movies for direct TMDB query: {query}")
         return movies
-        
     except Exception as e:
         logger.error(f"Error in direct TMDB search: {e}")
         raise HTTPException(status_code=500, detail="Failed to search movies")
