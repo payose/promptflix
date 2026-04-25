@@ -7,8 +7,8 @@ import { FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist
 const persistConfig = {
     key: "movies",
     storage,
-    whitelist: ['moviesList'], // Only persist moviesList
-    blacklist: ['loading', 'error'], // Don't persist loading and error states
+    whitelist: ['searchResults', 'sectionResults', 'partialSearches', 'partialSections'],
+    blacklist: ['loading', 'sectionLoading', 'error', 'sectionError', 'rateLimit'],
 };
 
 const persistedMovieReducer = persistReducer(persistConfig, movieReducer);

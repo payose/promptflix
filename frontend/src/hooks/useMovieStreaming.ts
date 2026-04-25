@@ -1,5 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useDispatch } from 'react-redux';
+import { toast } from 'sonner';
 import { AppDispatch } from '@/redux/store';
 import {
     startSectionStreaming,
@@ -13,7 +14,8 @@ import {
     setInitialSearchMovies,
     updateSearchMovieDetail,
     completeSearchLoading,
-    setSearchFromCache
+    setSearchFromCache,
+    setRateLimitInfo
 } from '@/redux/movieSlice';
 
 type StreamType = 'section' | 'search';
@@ -26,6 +28,7 @@ interface UseMovieStreamingOptions {
 
 export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreamingOptions) => {
     const dispatch = useDispatch<AppDispatch>();
+    const lastRateLimitMessageRef = useRef<string | null>(null);
 
     const streamMovies = useCallback(async (query: string, filter?: string) => {
         // Set loading state to true before starting the stream
@@ -37,8 +40,9 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
 
         // Use the same base URL as the axios configuration
         const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-        // Both section and search now use the same endpoint
-        const endpoint = `/movies/search/stream`;
+        const endpoint = type === 'section'
+            ? `/movies/sections/stream`
+            : `/movies/search/stream`;
 
         // Build query parameters
         const params = new URLSearchParams();
@@ -47,26 +51,40 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
             params.set('filter', filter);
         }
 
-        // Get session_id from cookie and pass it as query param
-        // EventSource doesn't send cookies automatically, so we need to pass it manually
-        const sessionId = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('session_id='))
-            ?.split('=')[1];
-
-        if (sessionId) {
-            params.set('session_id', sessionId);
-        }
-
         const eventSource = new EventSource(
-            `${baseUrl}${endpoint}?${params.toString()}`
+            `${baseUrl}${endpoint}?${params.toString()}`,
+            { withCredentials: true }
         );
 
         eventSource.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
 
+                if (data.rate_limit) {
+                    dispatch(setRateLimitInfo(data.rate_limit));
+
+                    const limitMessage = data.rate_limit.message;
+                    const limitStatus = data.rate_limit.status;
+                    const shouldNotify =
+                        limitMessage &&
+                        (limitStatus === 'warning' || limitStatus === 'exceeded') &&
+                        limitMessage !== lastRateLimitMessageRef.current;
+
+                    if (shouldNotify) {
+                        lastRateLimitMessageRef.current = limitMessage;
+
+                        if (limitStatus === 'exceeded') {
+                            toast.error(limitMessage, { id: 'rate-limit-status' });
+                        } else {
+                            toast.warning(limitMessage, { id: 'rate-limit-status' });
+                        }
+                    }
+                }
+
                 switch (data.type) {
+                    case 'rate_limit':
+                        break;
+
                     case 'initial':
                         // Immediately show skeleton cards with titles
                         if (type === 'section') {
@@ -129,12 +147,10 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
 
                     case 'error': {
                         console.error('Streaming error:', data.message);
-                        // Provide user-friendly error messages
                         let userMessage = data.message || 'An error occurred while fetching movies';
 
-                        // Check for specific error types
-                        if (data.message?.toLowerCase().includes('rate limit')) {
-                            userMessage = 'We\'re experiencing high demand. Please try again in a few moments.';
+                        if (data.rate_limit?.status === 'exceeded' && data.rate_limit.message) {
+                            userMessage = data.rate_limit.message;
                         }
 
                         if (type === 'section') {

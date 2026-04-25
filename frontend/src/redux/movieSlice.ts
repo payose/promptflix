@@ -8,6 +8,22 @@ interface PartialMovie {
   isLoading?: boolean;
 }
 
+export interface RateLimitInfo {
+  quota: {
+    hourLimit: number;
+    hourRemaining: number;
+    hourReset: number;
+    dayLimit: number;
+    dayRemaining: number;
+    dayReset: number;
+  };
+  status: 'ok' | 'warning' | 'exceeded';
+  message: string | null;
+  limitType: string | null;
+  retryAfter: number | null;
+  quotaConsumed: boolean;
+}
+
 interface MovieState {
   loading: boolean;
   movies: Movie[];
@@ -20,6 +36,7 @@ interface MovieState {
   // For progressive loading
   partialSections: Record<string, (Movie | PartialMovie)[]>;
   partialSearches: Record<string, (Movie | PartialMovie)[]>;
+  rateLimit: RateLimitInfo | null;
 }
 
 const initialState: MovieState = {
@@ -33,6 +50,7 @@ const initialState: MovieState = {
   error: null,
   partialSections: {},
   partialSearches: {},
+  rateLimit: null,
 };
 
 /**
@@ -105,6 +123,9 @@ const movieSlice = createSlice({
     },
     clearSearchCache: (state) => {
       state.searchResults = {};
+    },
+    setRateLimitInfo: (state, action: PayloadAction<RateLimitInfo>) => {
+      state.rateLimit = action.payload;
     },
     // Start streaming actions
     startSectionStreaming: (state, action: PayloadAction<{ query: string }>) => {
@@ -235,6 +256,7 @@ export const {
   resetMovieSection,
   clearSearchCache,
   clearSectionCache,
+  setRateLimitInfo,
   startSectionStreaming,
   startSearchStreaming,
   sectionStreamError,

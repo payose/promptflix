@@ -4,22 +4,23 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
+from cachetools import TTLCache
 import httpx
 import os
 import logging
 from typing import List, Dict, Any, Optional
 import json
 import asyncio
-from dotenv import load_dotenv
+from datetime import datetime
 
 from .session import SessionMiddleware, get_session_id, get_user_id
 from .database import get_db
 from .models.tracking import SearchHistory, ClickEvent
 from .models.user import User
 from .auth import link_session_to_user, create_user
-
-# Load environment variables from .env file
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+from .config import settings
+from .dependencies import check_rate_limit_for_session, get_rate_limit_info_for_session
+from .services.rate_limiter import RateLimitInfo
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -38,12 +39,7 @@ if ALLOWED_ORIGINS_ENV:
     # Remove empty strings from split
     ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
 else:
-    ALLOWED_ORIGINS = [
-        "http://localhost:3000",  # React dev server
-        "http://localhost:5173",  # Vite dev server
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-    ]
+    ALLOWED_ORIGINS = settings.ALLOWED_ORIGINS
 
 # For development, allow all origins. In production, use specific origins
 # You can also use ["*"] to allow all origins
@@ -67,11 +63,11 @@ logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
 # Why bcrypt? Industry standard, slow by design (makes brute-force attacks harder)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Environment variables
-TMDB_API_KEY = os.getenv("TMDB_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-TMDB_BASE_URL = os.getenv("TMDB_BASE_URL", "https://api.themoviedb.org/3").rstrip("/")
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+# External provider configuration
+TMDB_API_KEY = settings.TMDB_API_KEY
+OPENAI_API_KEY = settings.OPENAI_API_KEY
+TMDB_BASE_URL = settings.TMDB_BASE_URL
+OPENAI_BASE_URL = settings.OPENAI_BASE_URL
 
 if not TMDB_API_KEY:
     logger.warning("TMDB_API_KEY not found in environment variables")
@@ -113,15 +109,79 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
-# In-memory cache for API responses
-search_cache: Dict[str, List[Dict[str, Any]]] = {}
+# In-memory cache for API responses. This is per-process and is cleared on restart.
+search_cache = TTLCache(
+    maxsize=settings.SEARCH_CACHE_MAX_ITEMS,
+    ttl=settings.SEARCH_CACHE_TTL_SECONDS,
+)
+
+def _format_reset_time(timestamp: int) -> str:
+    reset_time = datetime.fromtimestamp(timestamp).strftime("%I:%M %p")
+    return reset_time.lstrip("0")
+
+
+def _limit_window_label(limit_type: Optional[str]) -> str:
+    return {
+        "per_hour": "hourly",
+        "per_day": "daily",
+    }.get(limit_type or "", "rate")
+
+
+def _search_count_label(count: int) -> str:
+    return "search" if count == 1 else "searches"
+
+
+def serialize_rate_limit(
+    rate_limit_info: RateLimitInfo,
+    status: Optional[str] = None,
+    message: Optional[str] = None,
+    limit_type: Optional[str] = None,
+    retry_after: Optional[int] = None,
+    quota_consumed: bool = False,
+) -> Dict[str, Any]:
+    """Return compact quota data for frontend state and user messaging."""
+    quota = {
+        "hourLimit": rate_limit_info.limit_hour,
+        "hourRemaining": rate_limit_info.remaining_hour,
+        "hourReset": rate_limit_info.reset_hour,
+        "dayLimit": rate_limit_info.limit_day,
+        "dayRemaining": rate_limit_info.remaining_day,
+        "dayReset": rate_limit_info.reset_day,
+    }
+
+    if status is None:
+        status = "ok"
+
+        if quota_consumed and rate_limit_info.remaining_hour <= max(1, int(rate_limit_info.limit_hour * 0.2)):
+            status = "warning"
+            message = (
+                f"You're close to your hourly search limit. "
+                f"{rate_limit_info.remaining_hour} {_search_count_label(rate_limit_info.remaining_hour)} left until "
+                f"{_format_reset_time(rate_limit_info.reset_hour)}."
+            )
+            limit_type = "per_hour"
+        elif quota_consumed and rate_limit_info.remaining_day <= max(1, int(rate_limit_info.limit_day * 0.2)):
+            status = "warning"
+            message = (
+                f"You're close to your daily search limit. "
+                f"{rate_limit_info.remaining_day} {_search_count_label(rate_limit_info.remaining_day)} left until "
+                f"{_format_reset_time(rate_limit_info.reset_day)}."
+            )
+            limit_type = "per_day"
+
+    return {
+        "quota": quota,
+        "status": status,
+        "message": message,
+        "limitType": limit_type,
+        "retryAfter": retry_after,
+        "quotaConsumed": quota_consumed,
+    }
+
 
 def get_cors_headers():
     """Get CORS headers for streaming responses"""
-    # Allow all origins for streaming endpoints
-    # The CORSMiddleware handles the actual origin validation
     return {
-        "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Access-Control-Allow-Headers": "*",
         "Access-Control-Expose-Headers": "*",
@@ -304,66 +364,117 @@ async def fetch_movie_details(movie_item: MovieListItem, content_filter: Optiona
         logger.error(f"Error fetching details for {movie_item.title}: {e}")
         return (index, None)
 
-# Streaming endpoint for search (progressive loading)
-@app.get("/api/movies/search/stream")
-async def stream_movie_search(
-    query: str = Query(..., description="Search query for movie recommendations"),
-    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama"),
-    session_id: Optional[str] = Query(None, description="Session ID from cookie (for EventSource compatibility)"),
-    user_id: Optional[int] = Depends(get_user_id),
-    db: Session = Depends(get_db),
-    session_id_from_cookie: str = Depends(get_session_id)
-):
-    """Stream movie search data - first titles, then progressive TMDB details"""
+def build_rate_limit_exceeded_payload(rate_limit_error: Dict[str, Any]) -> tuple[RateLimitInfo, Dict[str, Any]]:
+    rate_limit_info = RateLimitInfo(
+        limit_hour=rate_limit_error["rate_limit"]["limit_hour"],
+        remaining_hour=rate_limit_error["rate_limit"]["remaining_hour"],
+        limit_day=rate_limit_error["rate_limit"]["limit_day"],
+        remaining_day=rate_limit_error["rate_limit"]["remaining_day"],
+        reset_hour=rate_limit_error["rate_limit"]["reset_hour"],
+        reset_day=rate_limit_error["rate_limit"]["reset_day"],
+    )
+    reset_at = (
+        rate_limit_info.reset_hour
+        if rate_limit_error["limit_type"] == "per_hour"
+        else rate_limit_info.reset_day
+    )
+    rate_limit_payload = serialize_rate_limit(
+        rate_limit_info,
+        status="exceeded",
+        message=(
+            f"You have exceeded your {_limit_window_label(rate_limit_error['limit_type'])} search limit. "
+            f"Try again at {_format_reset_time(reset_at)}."
+        ),
+        limit_type=rate_limit_error["limit_type"],
+        retry_after=rate_limit_error["retry_after"],
+        quota_consumed=False,
+    )
+    return rate_limit_info, rate_limit_payload
 
-    # Use session_id from query param if provided (EventSource), otherwise use cookie
-    actual_session_id = session_id or session_id_from_cookie
+
+def stream_recommendations_response(
+    query: str,
+    content_filter: Optional[str],
+    user_id: Optional[int],
+    db: Session,
+    session_id: str,
+    charge_quota: bool,
+) -> StreamingResponse:
+    """
+    Stream movie search data - first titles, then progressive TMDB details.
+
+    User searches charge quota on cache misses. Homepage sections do not.
+    """
+
+    cache_key = f"{query}_{content_filter or 'all'}"
+    cached_movies = search_cache.get(cache_key)
+    quota_consumed = charge_quota and cached_movies is None
+    rate_limit_error: Optional[Any] = None
+    try:
+        if quota_consumed:
+            rate_limit_info = check_rate_limit_for_session(session_id)
+        else:
+            rate_limit_info = get_rate_limit_info_for_session(session_id)
+    except HTTPException as exc:
+        if exc.status_code != 429:
+            raise
+        rate_limit_error = exc.detail
+
+    if rate_limit_error is not None:
+        rate_limit_info, rate_limit_payload = build_rate_limit_exceeded_payload(rate_limit_error)
+    else:
+        rate_limit_payload = serialize_rate_limit(
+            rate_limit_info,
+            quota_consumed=quota_consumed,
+        )
 
     async def event_generator():
         try:
-            # Create cache key that includes filter
-            cache_key = f"{query}_{filter or 'all'}"
+            yield f"data: {json.dumps({'type': 'rate_limit', 'rate_limit': rate_limit_payload})}\n\n"
 
-            # Check cache first - if cached, send all at once
-            if cache_key in search_cache:
-                logger.info(f"Returning cached results for search query: {query} (filter: {filter})")
+            if rate_limit_error is not None:
+                yield f"data: {json.dumps({'type': 'error', 'message': rate_limit_payload['message'], 'limit_type': rate_limit_error['limit_type'], 'retry_after': rate_limit_error['retry_after'], 'rate_limit': rate_limit_payload})}\n\n"
+                return
+
+            if cached_movies is not None:
+                logger.info(f"Returning cached results for search query: {query} (filter: {content_filter})")
 
                 # Save cached search to database too
                 try:
                     search_record = SearchHistory(
-                        session_id=actual_session_id,
+                        session_id=session_id,
                         user_id=user_id,
                         query=query,
-                        results_count=len(search_cache[cache_key])
+                        results_count=len(cached_movies)
                     )
                     db.add(search_record)
                     db.commit()
-                    logger.info(f"Saved cached search to database: session_id={actual_session_id}, user_id={user_id}")
+                    logger.info(f"Saved cached search to database: session_id={session_id}, user_id={user_id}")
                 except Exception as db_error:
                     logger.error(f"Failed to save cached search to database: {db_error}")
                     db.rollback()
 
-                yield f"data: {json.dumps({'type': 'complete', 'query': query, 'movies': search_cache[cache_key]})}\n\n"
+                yield f"data: {json.dumps({'type': 'complete', 'query': query, 'movies': cached_movies, 'rate_limit': rate_limit_payload})}\n\n"
                 return
 
             # Step 1: Query OpenAI for movie/TV recommendations with filter
             try:
-                movie_list = query_openai_for_movies(query, filter)
-                logger.info(f"OpenAI returned {len(movie_list)} recommendations for search (filter: {filter})")
+                movie_list = query_openai_for_movies(query, content_filter)
+                logger.info(f"OpenAI returned {len(movie_list)} recommendations for search (filter: {content_filter})")
             except HTTPException as http_exc:
                 # Handle HTTPException from query_openai_for_movies
                 error_message = http_exc.detail
                 logger.error(f"OpenAI query failed: {error_message}")
-                yield f"data: {json.dumps({'type': 'error', 'message': error_message})}\n\n"
+                yield f"data: {json.dumps({'type': 'error', 'message': error_message, 'rate_limit': rate_limit_payload})}\n\n"
                 return
 
             # Step 2: Send initial titles/years immediately
             initial_data = [{"title": movie.title, "year": movie.year} for movie in movie_list]
-            yield f"data: {json.dumps({'type': 'initial', 'query': query, 'movies': initial_data})}\n\n"
+            yield f"data: {json.dumps({'type': 'initial', 'query': query, 'movies': initial_data, 'rate_limit': rate_limit_payload})}\n\n"
 
             # Step 3: Fetch all TMDB details in parallel using shared client for connection pooling
             async with httpx.AsyncClient() as client:
-                fetch_tasks = [fetch_movie_details(movie, filter, i, client) for i, movie in enumerate(movie_list)]
+                fetch_tasks = [fetch_movie_details(movie, content_filter, i, client) for i, movie in enumerate(movie_list)]
 
                 detailed_movies_dict = {}
                 for coro in asyncio.as_completed(fetch_tasks):
@@ -382,31 +493,38 @@ async def stream_movie_search(
             # Save search to database for tracking
             try:
                 search_record = SearchHistory(
-                    session_id=actual_session_id,
+                    session_id=session_id,
                     user_id=user_id,
                     query=query,
                     results_count=len(detailed_movies)
                 )
                 db.add(search_record)
                 db.commit()
-                logger.info(f"Saved search to database: session_id={actual_session_id}, user_id={user_id}")
+                logger.info(f"Saved search to database: session_id={session_id}, user_id={user_id}")
             except Exception as db_error:
                 logger.error(f"Failed to save search to database: {db_error}")
                 db.rollback()
 
             # Send completion signal
-            yield f"data: {json.dumps({'type': 'done', 'query': query, 'total': len(detailed_movies)})}\n\n"
-            logger.info(f"Successfully streamed {len(detailed_movies)} items for search: {query} (filter: {filter})")
+            yield f"data: {json.dumps({'type': 'done', 'query': query, 'total': len(detailed_movies), 'rate_limit': rate_limit_payload})}\n\n"
+            logger.info(f"Successfully streamed {len(detailed_movies)} items for search: {query} (filter: {content_filter})")
 
         except Exception as e:
             logger.error(f"Error in stream_movie_search: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e), 'rate_limit': rate_limit_payload})}\n\n"
 
-    # Combine standard SSE headers with CORS headers
+    # Combine standard SSE headers with CORS headers and rate limit headers
     headers = {
         "Cache-Control": "no-cache",
         "X-Accel-Buffering": "no",
         "Connection": "keep-alive",
+        # Rate limit headers
+        "X-RateLimit-Limit-Hour": str(rate_limit_info.limit_hour),
+        "X-RateLimit-Remaining-Hour": str(rate_limit_info.remaining_hour),
+        "X-RateLimit-Reset-Hour": str(rate_limit_info.reset_hour),
+        "X-RateLimit-Limit-Day": str(rate_limit_info.limit_day),
+        "X-RateLimit-Remaining-Day": str(rate_limit_info.remaining_day),
+        "X-RateLimit-Reset-Day": str(rate_limit_info.reset_day),
     }
     headers.update(get_cors_headers())
 
@@ -414,6 +532,44 @@ async def stream_movie_search(
         event_generator(),
         media_type="text/event-stream",
         headers=headers
+    )
+
+
+# Streaming endpoint for user searches (progressive loading)
+@app.get("/api/movies/search/stream")
+async def stream_movie_search(
+    query: str = Query(..., description="Search query for movie recommendations"),
+    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama"),
+    user_id: Optional[int] = Depends(get_user_id),
+    db: Session = Depends(get_db),
+    session_id: str = Depends(get_session_id),
+):
+    return stream_recommendations_response(
+        query=query,
+        content_filter=filter,
+        user_id=user_id,
+        db=db,
+        session_id=session_id,
+        charge_quota=True,
+    )
+
+
+# Streaming endpoint for homepage sections. These do not consume user quota.
+@app.get("/api/movies/sections/stream")
+async def stream_movie_section(
+    query: str = Query(..., description="Homepage section recommendation query"),
+    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama"),
+    user_id: Optional[int] = Depends(get_user_id),
+    db: Session = Depends(get_db),
+    session_id: str = Depends(get_session_id),
+):
+    return stream_recommendations_response(
+        query=query,
+        content_filter=filter,
+        user_id=user_id,
+        db=db,
+        session_id=session_id,
+        charge_quota=False,
     )
 
 # Fetch individual movie results (mirrors fetchMoviesResults)
@@ -435,15 +591,13 @@ async def fetch_movie_result(movie_item: MovieListItem) -> Dict[str, Any]:
 @app.delete("/api/cache/search")
 def clear_search_cache():
     """Clear search results cache (includes all searches and sections)"""
-    global search_cache
-    search_cache = {}
+    search_cache.clear()
     return {"message": "Search cache cleared"}
 
 @app.delete("/api/cache/all")
 def clear_all_cache():
     """Clear all caches"""
-    global search_cache
-    search_cache = {}
+    search_cache.clear()
     return {"message": "All caches cleared"}
 
 # Individual movie/TV details endpoint
@@ -692,6 +846,7 @@ def health_check():
 @app.get("/")
 def root():
     """Root endpoint with API information"""
+    
     return {
         "message": "FindsMovies API",
         "version": "1.0.0",
@@ -699,6 +854,7 @@ def root():
         "health": "/api/health",
         "endpoints": {
             "search_stream": "GET /api/movies/search/stream?query=...&filter=...",
+            "section_stream": "GET /api/movies/sections/stream?query=...&filter=...",
             "movie_details": "GET /api/movies/{movie_id}?media_type=...",
             "movie_reviews": "GET /api/movies/{movie_id}/reviews?media_type=...",
             "watch_providers": "GET /api/movies/{movie_id}/watch/providers?media_type=...",

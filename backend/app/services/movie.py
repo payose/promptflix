@@ -5,14 +5,15 @@ import logging
 from typing import List, Dict, Any, Optional
 from fastapi import HTTPException
 
-from .models import Movie, MovieRecommendation
+from ..models.movie import Movie, MovieRecommendation
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
 class TMDBService:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, base_url: str = settings.TMDB_BASE_URL):
         self.api_key = api_key
-        self.base_url = "https://api.themoviedb.org/3"
+        self.base_url = base_url
         self.base_image_url = "https://image.tmdb.org/t/p/w500"
         
         # Genre mapping for section queries
@@ -123,9 +124,9 @@ class TMDBService:
 
 
 class OpenAIService:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, base_url: str = settings.OPENAI_BASE_URL):
         self.api_key = api_key
-        self.base_url = "https://api.openai.com/v1"
+        self.base_url = base_url
 
     async def get_movie_recommendations(self, prompt: str) -> List[MovieRecommendation]:
         """Get movie recommendations from OpenAI"""
