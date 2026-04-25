@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from cachetools import TTLCache
 import httpx
-import os
 import logging
 from typing import List, Dict, Any, Optional
 import json
@@ -33,13 +32,7 @@ app = FastAPI(
 )
 
 # CORS configuration
-# Get allowed origins from environment variable or use default
-ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", "")
-if ALLOWED_ORIGINS_ENV:
-    # Remove empty strings from split
-    ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
-else:
-    ALLOWED_ORIGINS = settings.ALLOWED_ORIGINS
+ALLOWED_ORIGINS = settings.ALLOWED_ORIGINS
 
 # For development, allow all origins. In production, use specific origins
 # You can also use ["*"] to allow all origins
