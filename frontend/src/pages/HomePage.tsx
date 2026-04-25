@@ -39,14 +39,13 @@ const HomePage = () => {
         "@context": "https://schema.org",
         "@type": "WebSite",
         "name": "FindsMovies",
-        "description": "Discover movies with AI-powered recommendations",
-        "url": "https://findsmovies.com",
+        "alternateName": "FindsMovies AI Movie Finder",
+        "description": "Find movies and TV shows with AI-powered recommendations from natural language searches.",
+        "url": "https://findsmovies.com/",
+        "inLanguage": "en",
         "potentialAction": {
             "@type": "SearchAction",
-            "target": {
-                "@type": "EntryPoint",
-                "urlTemplate": "https://findsmovies.com"
-            },
+            "target": "https://findsmovies.com/?q={search_term_string}",
             "query-input": "required name=search_term_string"
         }
     };
@@ -54,8 +53,9 @@ const HomePage = () => {
     return (
         <>
             <SEO
-                title="FindsMovies - Discover Movies with AI"
-                description="Discover your next watch with AI-powered recommendations. Describe the movie you want, and get suggestions instantly."
+                title="FindsMovies - AI Movie Finder for Movies & TV Shows"
+                description="Find movies and TV shows with AI recommendations. Describe your mood, genre, theme or favorite title and get personalized picks with ratings, trailers and watch options."
+                keywords="AI movie finder, movie recommendations, TV show recommendations, find movies to watch, personalized movie suggestions, movie discovery, film search, anime recommendations, K-drama recommendations"
                 url="/"
                 structuredData={structuredData}
             />

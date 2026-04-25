@@ -11,15 +11,15 @@ interface SEOProps {
 }
 
 const SEO: React.FC<SEOProps> = ({
-    title = 'FindsMovies - Discover Movies with AI',
-    description = 'Discover your next favorite movie with AI-powered recommendations. Search for movies using natural language and get personalized suggestions instantly.',
-    keywords = 'movies, AI recommendations, movie discovery, film search, movie suggestions, ChatGPT movies, AI movie finder',
+    title = 'FindsMovies - AI Movie Finder for Movies & TV Shows',
+    description = 'Find movies and TV shows with AI recommendations. Describe your mood, genre, theme or favorite title and get personalized picks with ratings, trailers and watch options.',
+    keywords = 'AI movie finder, movie recommendations, TV show recommendations, find movies to watch, personalized movie suggestions, movie discovery, film search, anime recommendations, K-drama recommendations',
     image = '/og-image.png',
     url,
     type = 'website',
     structuredData
 }) => {
-    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://promptflix.com';
+    const siteUrl = import.meta.env.VITE_SITE_URL || 'https://findsmovies.com';
     const fullUrl = url ? `${siteUrl}${url}` : siteUrl;
     const fullImageUrl = image.startsWith('http') ? image : `${siteUrl}${image}`;
     const fullTitle = title.includes('FindsMovies') ? title : `${title} | FindsMovies`;
