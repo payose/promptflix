@@ -12,7 +12,6 @@ from typing import List, Dict, Any, Optional
 import json
 import asyncio
 from datetime import datetime
-from dotenv import load_dotenv
 
 from .session import SessionMiddleware, get_session_id, get_user_id
 from .database import get_db
@@ -22,9 +21,6 @@ from .auth import link_session_to_user, create_user
 from .config import settings
 from .dependencies import check_rate_limit_for_session, get_rate_limit_info_for_session
 from .services.rate_limiter import RateLimitInfo
-
-# Load environment variables from .env file
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -43,12 +39,7 @@ if ALLOWED_ORIGINS_ENV:
     # Remove empty strings from split
     ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
 else:
-    ALLOWED_ORIGINS = [
-        "http://localhost:3000",  # React dev server
-        "http://localhost:5173",  # Vite dev server
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-    ]
+    ALLOWED_ORIGINS = settings.ALLOWED_ORIGINS
 
 # For development, allow all origins. In production, use specific origins
 # You can also use ["*"] to allow all origins
@@ -72,11 +63,11 @@ logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
 # Why bcrypt? Industry standard, slow by design (makes brute-force attacks harder)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Environment variables
-TMDB_API_KEY = os.getenv("TMDB_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-TMDB_BASE_URL = os.getenv("TMDB_BASE_URL", "https://api.themoviedb.org/3").rstrip("/")
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+# External provider configuration
+TMDB_API_KEY = settings.TMDB_API_KEY
+OPENAI_API_KEY = settings.OPENAI_API_KEY
+TMDB_BASE_URL = settings.TMDB_BASE_URL
+OPENAI_BASE_URL = settings.OPENAI_BASE_URL
 
 if not TMDB_API_KEY:
     logger.warning("TMDB_API_KEY not found in environment variables")

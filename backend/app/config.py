@@ -3,8 +3,11 @@ from pydantic_settings import BaseSettings
 from pydantic import field_validator
 from typing import List
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Movie App API"
@@ -30,9 +33,15 @@ class Settings(BaseSettings):
 
     # Rate Limiting
     RATE_LIMIT_PER_HOUR: int = 5
-    RATE_LIMIT_PER_DAY: int = 10
+    RATE_LIMIT_PER_DAY: int = 15
     SEARCH_CACHE_TTL_SECONDS: int = 86400
     SEARCH_CACHE_MAX_ITEMS: int = 1000
+
+    @field_validator('TMDB_BASE_URL', 'OPENAI_BASE_URL', 'YOUTUBE_BASE_URL')
+    @classmethod
+    def normalize_base_url(cls, v: str) -> str:
+        """Keep URL joins consistent when values come from environment."""
+        return v.rstrip("/")
 
     @field_validator('RATE_LIMIT_PER_DAY')
     @classmethod
@@ -49,7 +58,7 @@ class Settings(BaseSettings):
         return v
 
     class Config:
-        env_file = ".env"
+        env_file = BACKEND_DIR / ".env"
         case_sensitive = True
         extra = "ignore"  # Ignore extra fields from .env that aren't defined in Settings
 
