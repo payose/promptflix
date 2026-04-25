@@ -1,7 +1,7 @@
 # app/config.py
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
-from typing import List
+from typing import List, Union
 import logging
 from pathlib import Path
 
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     YOUTUBE_API_KEY: str = ""
 
     # CORS
-    ALLOWED_ORIGINS: List[str] = [
+    ALLOWED_ORIGINS: Union[List[str], str] = [
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:3000",
@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_DAY: int = 15
     SEARCH_CACHE_TTL_SECONDS: int = 86400
     SEARCH_CACHE_MAX_ITEMS: int = 1000
+
+    @field_validator('ALLOWED_ORIGINS')
+    @classmethod
+    def parse_allowed_origins(cls, v: Union[List[str], str]) -> List[str]:
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     @field_validator('TMDB_BASE_URL', 'OPENAI_BASE_URL', 'YOUTUBE_BASE_URL')
     @classmethod
