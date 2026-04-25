@@ -46,6 +46,7 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
         // Build query parameters
         const params = new URLSearchParams();
         params.set('query', query);
+        params.set('source', type);
         if (filter) {
             params.set('filter', filter);
         }

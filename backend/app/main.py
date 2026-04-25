@@ -382,6 +382,7 @@ async def fetch_movie_details(movie_item: MovieListItem, content_filter: Optiona
 async def stream_movie_search(
     query: str = Query(..., description="Search query for movie recommendations"),
     filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama"),
+    source: str = Query("search", description="Request source: search or section"),
     user_id: Optional[int] = Depends(get_user_id),
     db: Session = Depends(get_db),
     session_id: str = Depends(get_session_id),
@@ -394,9 +395,11 @@ async def stream_movie_search(
 
     cache_key = f"{query}_{filter or 'all'}"
     cached_movies = search_cache.get(cache_key)
+    is_section_request = source == "section"
+    should_consume_quota = cached_movies is None and not is_section_request
     rate_limit_error: Optional[Any] = None
     try:
-        if cached_movies is None:
+        if should_consume_quota:
             rate_limit_info = check_rate_limit_for_session(session_id)
         else:
             rate_limit_info = get_rate_limit_info_for_session(session_id)
@@ -430,9 +433,9 @@ async def stream_movie_search(
     else:
         rate_limit_payload = serialize_rate_limit(
             rate_limit_info,
-            should_notify=cached_movies is None,
+            should_notify=should_consume_quota,
             cache_hit=cached_movies is not None,
-            quota_consumed=cached_movies is None,
+            quota_consumed=should_consume_quota,
         )
 
     async def event_generator():
