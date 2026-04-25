@@ -4,12 +4,14 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
+from cachetools import TTLCache
 import httpx
 import os
 import logging
 from typing import List, Dict, Any, Optional
 import json
 import asyncio
+from datetime import datetime
 from dotenv import load_dotenv
 
 from .session import SessionMiddleware, get_session_id, get_user_id
@@ -17,6 +19,9 @@ from .database import get_db
 from .models.tracking import SearchHistory, ClickEvent
 from .models.user import User
 from .auth import link_session_to_user, create_user
+from .config import settings
+from .dependencies import check_rate_limit_for_session, get_rate_limit_info_for_session
+from .services.rate_limiter import RateLimitInfo
 
 # Load environment variables from .env file
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -113,15 +118,83 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
-# In-memory cache for API responses
-search_cache: Dict[str, List[Dict[str, Any]]] = {}
+# In-memory cache for API responses. This is per-process and is cleared on restart.
+search_cache = TTLCache(
+    maxsize=settings.SEARCH_CACHE_MAX_ITEMS,
+    ttl=settings.SEARCH_CACHE_TTL_SECONDS,
+)
+
+def _format_reset_time(timestamp: int) -> str:
+    reset_time = datetime.fromtimestamp(timestamp).strftime("%I:%M %p")
+    return reset_time.lstrip("0")
+
+
+def _limit_window_label(limit_type: Optional[str]) -> str:
+    return {
+        "per_hour": "hourly",
+        "per_day": "daily",
+    }.get(limit_type or "", "rate")
+
+
+def _search_count_label(count: int) -> str:
+    return "search" if count == 1 else "searches"
+
+
+def serialize_rate_limit(
+    rate_limit_info: RateLimitInfo,
+    status: Optional[str] = None,
+    message: Optional[str] = None,
+    limit_type: Optional[str] = None,
+    retry_after: Optional[int] = None,
+    should_notify: bool = True,
+    cache_hit: bool = False,
+    quota_consumed: bool = True,
+) -> Dict[str, Any]:
+    """Return rate limit data using frontend-friendly camelCase keys."""
+    payload: Dict[str, Any] = {
+        "limitHour": rate_limit_info.limit_hour,
+        "remainingHour": rate_limit_info.remaining_hour,
+        "resetHour": rate_limit_info.reset_hour,
+        "limitDay": rate_limit_info.limit_day,
+        "remainingDay": rate_limit_info.remaining_day,
+        "resetDay": rate_limit_info.reset_day,
+    }
+
+    if status is None:
+        status = "ok"
+
+        if should_notify and rate_limit_info.remaining_hour <= max(1, int(rate_limit_info.limit_hour * 0.2)):
+            status = "warning"
+            message = (
+                f"You're close to your hourly search limit. "
+                f"{rate_limit_info.remaining_hour} {_search_count_label(rate_limit_info.remaining_hour)} left until "
+                f"{_format_reset_time(rate_limit_info.reset_hour)}."
+            )
+            limit_type = "per_hour"
+        elif should_notify and rate_limit_info.remaining_day <= max(1, int(rate_limit_info.limit_day * 0.2)):
+            status = "warning"
+            message = (
+                f"You're close to your daily search limit. "
+                f"{rate_limit_info.remaining_day} {_search_count_label(rate_limit_info.remaining_day)} left until "
+                f"{_format_reset_time(rate_limit_info.reset_day)}."
+            )
+            limit_type = "per_day"
+
+    payload["status"] = status
+    payload["limitFlag"] = status
+    payload["message"] = message
+    payload["limitType"] = limit_type
+    payload["retryAfter"] = retry_after
+    payload["shouldNotify"] = should_notify and status in {"warning", "exceeded"}
+    payload["cacheHit"] = cache_hit
+    payload["quotaConsumed"] = quota_consumed
+
+    return payload
+
 
 def get_cors_headers():
     """Get CORS headers for streaming responses"""
-    # Allow all origins for streaming endpoints
-    # The CORSMiddleware handles the actual origin validation
     return {
-        "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Access-Control-Allow-Headers": "*",
         "Access-Control-Expose-Headers": "*",
@@ -309,41 +382,86 @@ async def fetch_movie_details(movie_item: MovieListItem, content_filter: Optiona
 async def stream_movie_search(
     query: str = Query(..., description="Search query for movie recommendations"),
     filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama"),
-    session_id: Optional[str] = Query(None, description="Session ID from cookie (for EventSource compatibility)"),
     user_id: Optional[int] = Depends(get_user_id),
     db: Session = Depends(get_db),
-    session_id_from_cookie: str = Depends(get_session_id)
+    session_id: str = Depends(get_session_id),
 ):
-    """Stream movie search data - first titles, then progressive TMDB details"""
+    """
+    Stream movie search data - first titles, then progressive TMDB details.
 
-    # Use session_id from query param if provided (EventSource), otherwise use cookie
-    actual_session_id = session_id or session_id_from_cookie
+    Rate limited to prevent OpenAI API abuse.
+    """
+
+    cache_key = f"{query}_{filter or 'all'}"
+    cached_movies = search_cache.get(cache_key)
+    rate_limit_error: Optional[Any] = None
+    try:
+        if cached_movies is None:
+            rate_limit_info = check_rate_limit_for_session(session_id)
+        else:
+            rate_limit_info = get_rate_limit_info_for_session(session_id)
+    except HTTPException as exc:
+        if exc.status_code != 429:
+            raise
+        rate_limit_error = exc.detail
+        rate_limit_info = RateLimitInfo(
+            limit_hour=exc.detail["rate_limit"]["limit_hour"],
+            remaining_hour=exc.detail["rate_limit"]["remaining_hour"],
+            limit_day=exc.detail["rate_limit"]["limit_day"],
+            remaining_day=exc.detail["rate_limit"]["remaining_day"],
+            reset_hour=exc.detail["rate_limit"]["reset_hour"],
+            reset_day=exc.detail["rate_limit"]["reset_day"],
+        )
+
+    if rate_limit_error is not None:
+        rate_limit_payload = serialize_rate_limit(
+            rate_limit_info,
+            status="exceeded",
+            message=(
+                f"You have exceeded your {_limit_window_label(rate_limit_error['limit_type'])} search limit. "
+                f"Try again at {_format_reset_time(rate_limit_info.reset_hour if rate_limit_error['limit_type'] == 'per_hour' else rate_limit_info.reset_day)}."
+            ),
+            limit_type=rate_limit_error["limit_type"],
+            retry_after=rate_limit_error["retry_after"],
+            should_notify=True,
+            cache_hit=False,
+            quota_consumed=False,
+        )
+    else:
+        rate_limit_payload = serialize_rate_limit(
+            rate_limit_info,
+            should_notify=cached_movies is None,
+            cache_hit=cached_movies is not None,
+            quota_consumed=cached_movies is None,
+        )
 
     async def event_generator():
         try:
-            # Create cache key that includes filter
-            cache_key = f"{query}_{filter or 'all'}"
+            yield f"data: {json.dumps({'type': 'rate_limit', 'rate_limit': rate_limit_payload})}\n\n"
 
-            # Check cache first - if cached, send all at once
-            if cache_key in search_cache:
+            if rate_limit_error is not None:
+                yield f"data: {json.dumps({'type': 'error', 'message': rate_limit_payload['message'], 'limit_type': rate_limit_error['limit_type'], 'retry_after': rate_limit_error['retry_after'], 'rate_limit': rate_limit_payload})}\n\n"
+                return
+
+            if cached_movies is not None:
                 logger.info(f"Returning cached results for search query: {query} (filter: {filter})")
 
                 # Save cached search to database too
                 try:
                     search_record = SearchHistory(
-                        session_id=actual_session_id,
+                        session_id=session_id,
                         user_id=user_id,
                         query=query,
-                        results_count=len(search_cache[cache_key])
+                        results_count=len(cached_movies)
                     )
                     db.add(search_record)
                     db.commit()
-                    logger.info(f"Saved cached search to database: session_id={actual_session_id}, user_id={user_id}")
+                    logger.info(f"Saved cached search to database: session_id={session_id}, user_id={user_id}")
                 except Exception as db_error:
                     logger.error(f"Failed to save cached search to database: {db_error}")
                     db.rollback()
 
-                yield f"data: {json.dumps({'type': 'complete', 'query': query, 'movies': search_cache[cache_key]})}\n\n"
+                yield f"data: {json.dumps({'type': 'complete', 'query': query, 'movies': cached_movies, 'rate_limit': rate_limit_payload})}\n\n"
                 return
 
             # Step 1: Query OpenAI for movie/TV recommendations with filter
@@ -354,12 +472,12 @@ async def stream_movie_search(
                 # Handle HTTPException from query_openai_for_movies
                 error_message = http_exc.detail
                 logger.error(f"OpenAI query failed: {error_message}")
-                yield f"data: {json.dumps({'type': 'error', 'message': error_message})}\n\n"
+                yield f"data: {json.dumps({'type': 'error', 'message': error_message, 'rate_limit': rate_limit_payload})}\n\n"
                 return
 
             # Step 2: Send initial titles/years immediately
             initial_data = [{"title": movie.title, "year": movie.year} for movie in movie_list]
-            yield f"data: {json.dumps({'type': 'initial', 'query': query, 'movies': initial_data})}\n\n"
+            yield f"data: {json.dumps({'type': 'initial', 'query': query, 'movies': initial_data, 'rate_limit': rate_limit_payload})}\n\n"
 
             # Step 3: Fetch all TMDB details in parallel using shared client for connection pooling
             async with httpx.AsyncClient() as client:
@@ -382,31 +500,38 @@ async def stream_movie_search(
             # Save search to database for tracking
             try:
                 search_record = SearchHistory(
-                    session_id=actual_session_id,
+                    session_id=session_id,
                     user_id=user_id,
                     query=query,
                     results_count=len(detailed_movies)
                 )
                 db.add(search_record)
                 db.commit()
-                logger.info(f"Saved search to database: session_id={actual_session_id}, user_id={user_id}")
+                logger.info(f"Saved search to database: session_id={session_id}, user_id={user_id}")
             except Exception as db_error:
                 logger.error(f"Failed to save search to database: {db_error}")
                 db.rollback()
 
             # Send completion signal
-            yield f"data: {json.dumps({'type': 'done', 'query': query, 'total': len(detailed_movies)})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'query': query, 'total': len(detailed_movies), 'rate_limit': rate_limit_payload})}\n\n"
             logger.info(f"Successfully streamed {len(detailed_movies)} items for search: {query} (filter: {filter})")
 
         except Exception as e:
             logger.error(f"Error in stream_movie_search: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e), 'rate_limit': rate_limit_payload})}\n\n"
 
-    # Combine standard SSE headers with CORS headers
+    # Combine standard SSE headers with CORS headers and rate limit headers
     headers = {
         "Cache-Control": "no-cache",
         "X-Accel-Buffering": "no",
         "Connection": "keep-alive",
+        # Rate limit headers
+        "X-RateLimit-Limit-Hour": str(rate_limit_info.limit_hour),
+        "X-RateLimit-Remaining-Hour": str(rate_limit_info.remaining_hour),
+        "X-RateLimit-Reset-Hour": str(rate_limit_info.reset_hour),
+        "X-RateLimit-Limit-Day": str(rate_limit_info.limit_day),
+        "X-RateLimit-Remaining-Day": str(rate_limit_info.remaining_day),
+        "X-RateLimit-Reset-Day": str(rate_limit_info.reset_day),
     }
     headers.update(get_cors_headers())
 
@@ -435,15 +560,13 @@ async def fetch_movie_result(movie_item: MovieListItem) -> Dict[str, Any]:
 @app.delete("/api/cache/search")
 def clear_search_cache():
     """Clear search results cache (includes all searches and sections)"""
-    global search_cache
-    search_cache = {}
+    search_cache.clear()
     return {"message": "Search cache cleared"}
 
 @app.delete("/api/cache/all")
 def clear_all_cache():
     """Clear all caches"""
-    global search_cache
-    search_cache = {}
+    search_cache.clear()
     return {"message": "All caches cleared"}
 
 # Individual movie/TV details endpoint
@@ -692,6 +815,7 @@ def health_check():
 @app.get("/")
 def root():
     """Root endpoint with API information"""
+    
     return {
         "message": "FindsMovies API",
         "version": "1.0.0",
