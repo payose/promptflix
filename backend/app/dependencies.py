@@ -4,10 +4,9 @@ FastAPI Dependencies
 Central location for reusable dependency functions.
 """
 
-from fastapi import Depends, HTTPException
+from fastapi import HTTPException
 
 from .services.rate_limiter import rate_limiter, RateLimitInfo, RateLimitExceeded
-from .session import get_session_id
 
 
 def _is_valid_session_format(session_id: str) -> bool:
@@ -54,35 +53,6 @@ def get_rate_limit_info_for_session(session_id: str) -> RateLimitInfo:
         )
 
     return rate_limiter.get_current_limits(session_id)
-
-
-async def enforce_rate_limit(
-    session_id: str = Depends(get_session_id)
-) -> RateLimitInfo:
-    """
-    FastAPI dependency that enforces rate limits for OpenAI API calls.
-
-    This should be added to all endpoints that make OpenAI API calls.
-
-    Args:
-        session_id: Session identifier from cookie
-
-    Returns:
-        RateLimitInfo with current rate limit status
-
-    Raises:
-        HTTPException(400): If session_id format is invalid
-        HTTPException(429): If rate limit is exceeded
-
-    Usage:
-        @app.get("/api/some-endpoint")
-        async def my_endpoint(
-            rate_limit_info: RateLimitInfo = Depends(enforce_rate_limit)
-        ):
-            # Add rate limit headers to response
-            # ... your endpoint logic ...
-    """
-    return check_rate_limit_for_session(session_id)
 
 
 def _rate_limit_http_exception(e: RateLimitExceeded) -> HTTPException:
