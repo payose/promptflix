@@ -40,13 +40,13 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
 
         // Use the same base URL as the axios configuration
         const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-        // Both section and search now use the same endpoint
-        const endpoint = `/movies/search/stream`;
+        const endpoint = type === 'section'
+            ? `/movies/sections/stream`
+            : `/movies/search/stream`;
 
         // Build query parameters
         const params = new URLSearchParams();
         params.set('query', query);
-        params.set('source', type);
         if (filter) {
             params.set('filter', filter);
         }
@@ -66,7 +66,6 @@ export const useMovieStreaming = ({ type, onComplete, onError }: UseMovieStreami
                     const limitMessage = data.rate_limit.message;
                     const limitStatus = data.rate_limit.status;
                     const shouldNotify =
-                        data.rate_limit.shouldNotify &&
                         limitMessage &&
                         (limitStatus === 'warning' || limitStatus === 'exceeded') &&
                         limitMessage !== lastRateLimitMessageRef.current;
