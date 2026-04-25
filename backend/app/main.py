@@ -146,24 +146,22 @@ def serialize_rate_limit(
     message: Optional[str] = None,
     limit_type: Optional[str] = None,
     retry_after: Optional[int] = None,
-    should_notify: bool = True,
-    cache_hit: bool = False,
-    quota_consumed: bool = True,
+    quota_consumed: bool = False,
 ) -> Dict[str, Any]:
-    """Return rate limit data using frontend-friendly camelCase keys."""
-    payload: Dict[str, Any] = {
-        "limitHour": rate_limit_info.limit_hour,
-        "remainingHour": rate_limit_info.remaining_hour,
-        "resetHour": rate_limit_info.reset_hour,
-        "limitDay": rate_limit_info.limit_day,
-        "remainingDay": rate_limit_info.remaining_day,
-        "resetDay": rate_limit_info.reset_day,
+    """Return compact quota data for frontend state and user messaging."""
+    quota = {
+        "hourLimit": rate_limit_info.limit_hour,
+        "hourRemaining": rate_limit_info.remaining_hour,
+        "hourReset": rate_limit_info.reset_hour,
+        "dayLimit": rate_limit_info.limit_day,
+        "dayRemaining": rate_limit_info.remaining_day,
+        "dayReset": rate_limit_info.reset_day,
     }
 
     if status is None:
         status = "ok"
 
-        if should_notify and rate_limit_info.remaining_hour <= max(1, int(rate_limit_info.limit_hour * 0.2)):
+        if quota_consumed and rate_limit_info.remaining_hour <= max(1, int(rate_limit_info.limit_hour * 0.2)):
             status = "warning"
             message = (
                 f"You're close to your hourly search limit. "
@@ -171,7 +169,7 @@ def serialize_rate_limit(
                 f"{_format_reset_time(rate_limit_info.reset_hour)}."
             )
             limit_type = "per_hour"
-        elif should_notify and rate_limit_info.remaining_day <= max(1, int(rate_limit_info.limit_day * 0.2)):
+        elif quota_consumed and rate_limit_info.remaining_day <= max(1, int(rate_limit_info.limit_day * 0.2)):
             status = "warning"
             message = (
                 f"You're close to your daily search limit. "
@@ -180,16 +178,14 @@ def serialize_rate_limit(
             )
             limit_type = "per_day"
 
-    payload["status"] = status
-    payload["limitFlag"] = status
-    payload["message"] = message
-    payload["limitType"] = limit_type
-    payload["retryAfter"] = retry_after
-    payload["shouldNotify"] = should_notify and status in {"warning", "exceeded"}
-    payload["cacheHit"] = cache_hit
-    payload["quotaConsumed"] = quota_consumed
-
-    return payload
+    return {
+        "quota": quota,
+        "status": status,
+        "message": message,
+        "limitType": limit_type,
+        "retryAfter": retry_after,
+        "quotaConsumed": quota_consumed,
+    }
 
 
 def get_cors_headers():
@@ -377,29 +373,54 @@ async def fetch_movie_details(movie_item: MovieListItem, content_filter: Optiona
         logger.error(f"Error fetching details for {movie_item.title}: {e}")
         return (index, None)
 
-# Streaming endpoint for search (progressive loading)
-@app.get("/api/movies/search/stream")
-async def stream_movie_search(
-    query: str = Query(..., description="Search query for movie recommendations"),
-    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama"),
-    source: str = Query("search", description="Request source: search or section"),
-    user_id: Optional[int] = Depends(get_user_id),
-    db: Session = Depends(get_db),
-    session_id: str = Depends(get_session_id),
-):
+def build_rate_limit_exceeded_payload(rate_limit_error: Dict[str, Any]) -> tuple[RateLimitInfo, Dict[str, Any]]:
+    rate_limit_info = RateLimitInfo(
+        limit_hour=rate_limit_error["rate_limit"]["limit_hour"],
+        remaining_hour=rate_limit_error["rate_limit"]["remaining_hour"],
+        limit_day=rate_limit_error["rate_limit"]["limit_day"],
+        remaining_day=rate_limit_error["rate_limit"]["remaining_day"],
+        reset_hour=rate_limit_error["rate_limit"]["reset_hour"],
+        reset_day=rate_limit_error["rate_limit"]["reset_day"],
+    )
+    reset_at = (
+        rate_limit_info.reset_hour
+        if rate_limit_error["limit_type"] == "per_hour"
+        else rate_limit_info.reset_day
+    )
+    rate_limit_payload = serialize_rate_limit(
+        rate_limit_info,
+        status="exceeded",
+        message=(
+            f"You have exceeded your {_limit_window_label(rate_limit_error['limit_type'])} search limit. "
+            f"Try again at {_format_reset_time(reset_at)}."
+        ),
+        limit_type=rate_limit_error["limit_type"],
+        retry_after=rate_limit_error["retry_after"],
+        quota_consumed=False,
+    )
+    return rate_limit_info, rate_limit_payload
+
+
+def stream_recommendations_response(
+    query: str,
+    content_filter: Optional[str],
+    user_id: Optional[int],
+    db: Session,
+    session_id: str,
+    charge_quota: bool,
+) -> StreamingResponse:
     """
     Stream movie search data - first titles, then progressive TMDB details.
 
-    Rate limited to prevent OpenAI API abuse.
+    User searches charge quota on cache misses. Homepage sections do not.
     """
 
-    cache_key = f"{query}_{filter or 'all'}"
+    cache_key = f"{query}_{content_filter or 'all'}"
     cached_movies = search_cache.get(cache_key)
-    is_section_request = source == "section"
-    should_consume_quota = cached_movies is None and not is_section_request
+    quota_consumed = charge_quota and cached_movies is None
     rate_limit_error: Optional[Any] = None
     try:
-        if should_consume_quota:
+        if quota_consumed:
             rate_limit_info = check_rate_limit_for_session(session_id)
         else:
             rate_limit_info = get_rate_limit_info_for_session(session_id)
@@ -407,35 +428,13 @@ async def stream_movie_search(
         if exc.status_code != 429:
             raise
         rate_limit_error = exc.detail
-        rate_limit_info = RateLimitInfo(
-            limit_hour=exc.detail["rate_limit"]["limit_hour"],
-            remaining_hour=exc.detail["rate_limit"]["remaining_hour"],
-            limit_day=exc.detail["rate_limit"]["limit_day"],
-            remaining_day=exc.detail["rate_limit"]["remaining_day"],
-            reset_hour=exc.detail["rate_limit"]["reset_hour"],
-            reset_day=exc.detail["rate_limit"]["reset_day"],
-        )
 
     if rate_limit_error is not None:
-        rate_limit_payload = serialize_rate_limit(
-            rate_limit_info,
-            status="exceeded",
-            message=(
-                f"You have exceeded your {_limit_window_label(rate_limit_error['limit_type'])} search limit. "
-                f"Try again at {_format_reset_time(rate_limit_info.reset_hour if rate_limit_error['limit_type'] == 'per_hour' else rate_limit_info.reset_day)}."
-            ),
-            limit_type=rate_limit_error["limit_type"],
-            retry_after=rate_limit_error["retry_after"],
-            should_notify=True,
-            cache_hit=False,
-            quota_consumed=False,
-        )
+        rate_limit_info, rate_limit_payload = build_rate_limit_exceeded_payload(rate_limit_error)
     else:
         rate_limit_payload = serialize_rate_limit(
             rate_limit_info,
-            should_notify=should_consume_quota,
-            cache_hit=cached_movies is not None,
-            quota_consumed=should_consume_quota,
+            quota_consumed=quota_consumed,
         )
 
     async def event_generator():
@@ -447,7 +446,7 @@ async def stream_movie_search(
                 return
 
             if cached_movies is not None:
-                logger.info(f"Returning cached results for search query: {query} (filter: {filter})")
+                logger.info(f"Returning cached results for search query: {query} (filter: {content_filter})")
 
                 # Save cached search to database too
                 try:
@@ -469,8 +468,8 @@ async def stream_movie_search(
 
             # Step 1: Query OpenAI for movie/TV recommendations with filter
             try:
-                movie_list = query_openai_for_movies(query, filter)
-                logger.info(f"OpenAI returned {len(movie_list)} recommendations for search (filter: {filter})")
+                movie_list = query_openai_for_movies(query, content_filter)
+                logger.info(f"OpenAI returned {len(movie_list)} recommendations for search (filter: {content_filter})")
             except HTTPException as http_exc:
                 # Handle HTTPException from query_openai_for_movies
                 error_message = http_exc.detail
@@ -484,7 +483,7 @@ async def stream_movie_search(
 
             # Step 3: Fetch all TMDB details in parallel using shared client for connection pooling
             async with httpx.AsyncClient() as client:
-                fetch_tasks = [fetch_movie_details(movie, filter, i, client) for i, movie in enumerate(movie_list)]
+                fetch_tasks = [fetch_movie_details(movie, content_filter, i, client) for i, movie in enumerate(movie_list)]
 
                 detailed_movies_dict = {}
                 for coro in asyncio.as_completed(fetch_tasks):
@@ -517,7 +516,7 @@ async def stream_movie_search(
 
             # Send completion signal
             yield f"data: {json.dumps({'type': 'done', 'query': query, 'total': len(detailed_movies), 'rate_limit': rate_limit_payload})}\n\n"
-            logger.info(f"Successfully streamed {len(detailed_movies)} items for search: {query} (filter: {filter})")
+            logger.info(f"Successfully streamed {len(detailed_movies)} items for search: {query} (filter: {content_filter})")
 
         except Exception as e:
             logger.error(f"Error in stream_movie_search: {e}")
@@ -542,6 +541,44 @@ async def stream_movie_search(
         event_generator(),
         media_type="text/event-stream",
         headers=headers
+    )
+
+
+# Streaming endpoint for user searches (progressive loading)
+@app.get("/api/movies/search/stream")
+async def stream_movie_search(
+    query: str = Query(..., description="Search query for movie recommendations"),
+    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama"),
+    user_id: Optional[int] = Depends(get_user_id),
+    db: Session = Depends(get_db),
+    session_id: str = Depends(get_session_id),
+):
+    return stream_recommendations_response(
+        query=query,
+        content_filter=filter,
+        user_id=user_id,
+        db=db,
+        session_id=session_id,
+        charge_quota=True,
+    )
+
+
+# Streaming endpoint for homepage sections. These do not consume user quota.
+@app.get("/api/movies/sections/stream")
+async def stream_movie_section(
+    query: str = Query(..., description="Homepage section recommendation query"),
+    filter: Optional[str] = Query(None, description="Content type filter: all, movies, tv-shows, anime, k-drama"),
+    user_id: Optional[int] = Depends(get_user_id),
+    db: Session = Depends(get_db),
+    session_id: str = Depends(get_session_id),
+):
+    return stream_recommendations_response(
+        query=query,
+        content_filter=filter,
+        user_id=user_id,
+        db=db,
+        session_id=session_id,
+        charge_quota=False,
     )
 
 # Fetch individual movie results (mirrors fetchMoviesResults)
@@ -826,6 +863,7 @@ def root():
         "health": "/api/health",
         "endpoints": {
             "search_stream": "GET /api/movies/search/stream?query=...&filter=...",
+            "section_stream": "GET /api/movies/sections/stream?query=...&filter=...",
             "movie_details": "GET /api/movies/{movie_id}?media_type=...",
             "movie_reviews": "GET /api/movies/{movie_id}/reviews?media_type=...",
             "watch_providers": "GET /api/movies/{movie_id}/watch/providers?media_type=...",
