@@ -9,19 +9,18 @@ interface PartialMovie {
 }
 
 export interface RateLimitInfo {
-  limitHour: number;
-  remainingHour: number;
-  resetHour: number;
-  limitDay: number;
-  remainingDay: number;
-  resetDay: number;
+  quota: {
+    hourLimit: number;
+    hourRemaining: number;
+    hourReset: number;
+    dayLimit: number;
+    dayRemaining: number;
+    dayReset: number;
+  };
   status: 'ok' | 'warning' | 'exceeded';
-  limitFlag: 'ok' | 'warning' | 'exceeded';
   message: string | null;
   limitType: string | null;
   retryAfter: number | null;
-  shouldNotify: boolean;
-  cacheHit: boolean;
   quotaConsumed: boolean;
 }
 
