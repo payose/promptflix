@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Sparkles, Film, Tv, Play, Clapperboard } from 'lucide-react';
+import { X, Sparkles, Film, Tv, Clapperboard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface SearchModalProps {
@@ -8,10 +8,9 @@ interface SearchModalProps {
     initialQuery?: string;
 }
 
-type FilterType = 'all' | 'movies' | 'tv-shows' | 'anime' | 'k-drama';
+type FilterType = 'movies' | 'tv-shows' | 'anime' | 'k-drama';
 
 const filters: { value: FilterType; label: string; icon: typeof Film }[] = [
-    { value: 'all', label: 'All', icon: Play },
     { value: 'movies', label: 'Movies', icon: Film },
     { value: 'tv-shows', label: 'TV Shows', icon: Tv },
     { value: 'anime', label: 'Anime', icon: Sparkles },
@@ -20,7 +19,7 @@ const filters: { value: FilterType; label: string; icon: typeof Film }[] = [
 
 export default function SearchModal({ isOpen, onClose, initialQuery = '' }: SearchModalProps) {
     const [query, setQuery] = useState(initialQuery);
-    const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
+    const [selectedFilter, setSelectedFilter] = useState<FilterType>('movies');
     const navigate = useNavigate();
 
     // Character count validation
@@ -59,9 +58,7 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
 
         const params = new URLSearchParams();
         params.set('q', query.trim());
-        if (selectedFilter !== 'all') {
-            params.set('filter', selectedFilter);
-        }
+        params.set('filter', selectedFilter);
 
         navigate(`/search?${params.toString()}`);
         onClose();
@@ -81,7 +78,7 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-labelledby="search-modal-title">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"
                 onClick={onClose}
                 aria-hidden="true"
             />
@@ -154,7 +151,7 @@ export default function SearchModal({ isOpen, onClose, initialQuery = '' }: Sear
                         <fieldset className="space-y-3">
                             <legend className="text-sm font-medium text-zinc-400 flex items-center gap-2">
                                 <Film className="w-4 h-4" aria-hidden="true" />
-                                Content Type <span className="text-zinc-600 font-normal">(Optional)</span>
+                                Content Type
                             </legend>
                             <div className="flex flex-wrap gap-2" role="group" aria-label="Content type filters">
                                 {filters.map((filter) => {
