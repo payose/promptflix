@@ -650,6 +650,20 @@ async def get_content_watch_providers(
         logger.error(f"Error getting watch providers for ID {content_id} (type: {media_type}): {e}")
         raise HTTPException(status_code=500, detail="Failed to get watch providers")
 
+# Get credits for a specific movie/TV show
+@app.get("/api/movies/{content_id}/credits")
+async def get_content_credits(
+    content_id: int,
+    media_type: Optional[str] = Query(None, description="Media type: movie or tv")
+) -> Dict[str, Any]:
+    """Get cast and crew credits for a specific movie or TV show"""
+    try:
+        endpoint = f"/tv/{content_id}/credits" if media_type == "tv" else f"/movie/{content_id}/credits"
+        return await make_tmdb_request(endpoint)
+    except Exception as e:
+        logger.error(f"Error getting credits for ID {content_id} (type: {media_type}): {e}")
+        raise HTTPException(status_code=500, detail="Failed to get credits")
+
 # Direct TMDB search endpoint
 @app.get("/api/tmdb/search")
 async def direct_tmdb_search(
