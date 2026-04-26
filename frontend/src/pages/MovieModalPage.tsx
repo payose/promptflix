@@ -5,7 +5,8 @@ const MovieModalPage = () => {
     const { id } = useParams<{ id: string }>();
     const location = useLocation();
     const searchParams = new URLSearchParams(location.search);
-    const mediaType = searchParams.get('media_type') || 'movie';
+    const state = location.state as { movie?: { media_type?: string } } | null;
+    const mediaType = searchParams.get('media_type') || state?.movie?.media_type || 'movie';
 
     if (!id) return null;
 

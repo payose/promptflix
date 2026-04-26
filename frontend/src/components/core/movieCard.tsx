@@ -28,6 +28,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeav
 
     const isLoading = !isFullMovie(movie);
     const fullMovie = isFullMovie(movie) ? movie : null;
+    const mediaType = fullMovie?.media_type || 'movie';
 
     // Track click when user clicks on movie
     const handleClick = () => {
@@ -108,7 +109,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isHovered, onHover, onLeav
         <>
             {isLoading ? cardContent : (
                 <Link
-                    to={`/movies/${fullMovie!.id}`}
+                    to={`/movies/${fullMovie!.id}?media_type=${encodeURIComponent(mediaType)}`}
                     state={{ backgroundLocation: location, movie: fullMovie }}
                     onClick={handleClick}
                 >
